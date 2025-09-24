@@ -1,0 +1,7 @@
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+transformers==4.56.2
+datasets==4.1.1
+pydub==0.25.1
+textgrid==1.6.1
