@@ -194,11 +194,13 @@ def GenerateCharMap(tokenizer_name, output_path, output_audio_folder):
     # Generate a character mapping file based on the tokenizer and dataset
     # Load the tokenizer
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    gold = set(tokenizer.vocab.keys())
     
     # Read the dataset.csv file from each subfolder of output_audio_folder and concatenate them
     dataset_df = pd.DataFrame(columns=['audio_path', 'transcript'])
     for subfolder in Path(output_audio_folder).iterdir():
+        # exclude test folders with name Gold or gold
+        if subfolder.name.lower() in ['gold']:
+            continue
         if subfolder.is_dir():
             csv_path = subfolder / "dataset.csv"
             if csv_path.exists():
@@ -223,6 +225,9 @@ def GenerateCharMap(tokenizer_name, output_path, output_audio_folder):
         unique_words = set()
         for w_lst in words:
             unique_words = unique_words.union(set(w_lst))
+        ## limit unique_words to 10
+        if len(unique_words) > 10:
+            unique_words = random.sample(list(unique_words), 10)
         mapping['sample_wordforms'].append(' '.join(unique_words))
 
     mapping_df = pd.DataFrame(mapping)
@@ -338,10 +343,7 @@ def main():
     
     # If tokenizer is provided, generate character mapping file and new vocab file
     if args.tokenizer:
-        if not args.char_map_file:
-            char_map_path = output_dir / "char_map.tsv"
-        else:
-            char_map_path = Path(args.char_map_file)
+        char_map_path = output_dir / "char_map.tsv"
             
         CHARS = GenerateCharMap(
             tokenizer_name=args.tokenizer,

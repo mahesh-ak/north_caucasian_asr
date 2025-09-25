@@ -21,7 +21,5 @@ This file should have columns `src`, `dst` and `type`
 ## To do
 
 * Fix delimiter issue with tokenizers
-* Maintain a common tier names pool across a run
-* Handle the case with two differnt tiers for each speaker in a conversation
 * Fix identifier for tiers containing IPA transcripts
 * Fix the notation of `data/<LANG>/char_map.tsv` file
