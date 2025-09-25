@@ -46,7 +46,7 @@ class CorrMap:
 
 
 
-def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map):
+def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
     # Convert TextGrid annotations to segmented WAV files and create a CSV mapping file.
     # CSV file to store mapping from segment file to transcript
     csv_file = os.path.join(output_audio_folder, "dataset.csv")
@@ -66,8 +66,6 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map):
         # tier names are dependent on the language and annotation scheme
         # hence we try to infer it from the first file by printing the contents and use human in the loop
         # if somewhere down the line, this tier name is not found, we again print the tier names and ask for human input
-        # thus maintain a list of correct tier names
-        tier_names = []
         
         for file in tqdm(os.listdir(data_folder)):
             if file.lower().endswith(".textgrid"):
@@ -97,12 +95,15 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map):
                         contents = ' | '.join([interval.mark for interval in tier.intervals[:3]])
                         print(f"   Contents: {contents} ...")
                         
-                    tier_idx = int(input("Enter the index of the tier to use for transcription: "))
-                    if tier_idx == -1:
+                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple): ")
+                    ## convert to list of int
+                    tier_idxs = [int(x) for x in tier_idxs.split(',')]
+                    if -1 in tier_idxs:
                         print(f"Skipping file {textgrid_path}")
                         continue
-                    tier_names.append(tg.tiers[tier_idx].name)
-                
+                    for tier_idx in tier_idxs:
+                        tier_names.append(tg.tiers[tier_idx].name)
+                        
                 ## take intersection of tier_names and tg.tiers as current_tier_names
                 current_tier_names = [tier.name for tier in tg.tiers if tier.name in tier_names]
                 if len(current_tier_names) == 0: # no intersection
@@ -112,20 +113,22 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map):
                         ## print first 3 contents concatenated
                         contents = ' | '.join([interval.mark for interval in tier.intervals[:3]])
                         print(f"   Contents: {contents} ...")
-                    tier_idx = int(input("Enter the index of the tier to use for transcription: "))
-                    if tier_idx == -1:
+                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple): ")
+                    ## convert to list of int
+                    tier_idxs = [int(x) for x in tier_idxs.split(',')]
+                    if -1 in tier_idxs:
                         print(f"Skipping file {textgrid_path}")
                         continue
-                    tier_name = tg.tiers[tier_idx].name
-                    tier_names.append(tg.tiers[tier_idx].name)
-                    current_tier_names.append(tg.tiers[tier_idx].name)
+                    for tier_idx in tier_idxs:
+                        tier_names.append(tg.tiers[tier_idx].name)
+                        current_tier_names.append(tg.tiers[tier_idx].name)
+
                 else:
-                    tier_name = current_tier_names[0] # use the first one
                     if len(current_tier_names) > 1:
-                        print(f"Warning! Multiple matching tier names found in {textgrid_path}: {current_tier_names}. Using {tier_name}.")
+                        print(f"Warning! Multiple matching tier names found in {textgrid_path}: {current_tier_names}")
                         
                 for tier in tg.tiers:
-                    if not tier.name == tier_name:
+                    if not tier.name in current_tier_names:
                         continue
                     segment_index = 0
                     for interval in tier.intervals:
@@ -155,17 +158,17 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map):
                         segment_index += 1
 
     print(f"Dataset preparation complete. CSV saved to {csv_file}")
+    return tier_names
 
 def space_separate(sent):
     # Separate phonemes in a given sentence
     phonemes = []
-    for c in ['k','q','c','p','č','t']:
-        sent = sent.replace(c+"'",c+"ʼ")
+
     i = 0
     while i < len(sent):
         if i < len(sent)-1:
-            if sent[i+1] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ']:
-                if i < len(sent) - 2 and sent[i+2] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ']:
+            if sent[i+1] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
+                if i < len(sent) - 2 and sent[i+2] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
                     phonemes.append(sent[i]+sent[i+1]+sent[i+2])
                     i += 3
                 else:
@@ -173,7 +176,7 @@ def space_separate(sent):
                     i += 2
                 continue
             elif sent[i+1] in ['͡']:
-                if i < len(sent) - 3 and sent[i+3] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ']:
+                if i < len(sent) - 3 and sent[i+3] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
                     phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3])
                     i += 4
                 else:
@@ -204,14 +207,13 @@ def GenerateCharMap(tokenizer_name, output_path, output_audio_folder):
 
     # Get all unique characters in the transcripts
     chars = []
-    print("Possible problamatic sentences:")
     for sent in dataset_df['transcript']:
         chars += space_separate(sent)
     IPA_CHARS = sorted(list(set(chars).difference(set(cyrillic))))
-    diff_char_counts = Counter(c for c in chars if c not in gold and c not in cyrillic)
+    diff_char_counts = Counter(c for c in chars if tokenizer.unk_token_id in tokenizer(c)['input_ids'] and c not in cyrillic) 
     
     # Create a DataFrame for the character mapping
-    mapping = {'src': [], 'count': [], 'sample_wordforms':[], 'dst': ['']*len(diff_char_counts), 'type': ['']*len(diff_char_counts)}
+    mapping = {'src': [], 'dst': ['']*len(diff_char_counts), 'type': ['']*len(diff_char_counts), 'count': [], 'sample_wordforms':[]}
     for k,v in diff_char_counts.items():
         mapping['src'].append(k)
         mapping['count'].append(v)
@@ -263,6 +265,13 @@ def parse_args():
         required=False,
         help="Tokenizer to use for processing text",
     )
+
+    parser.add_argument(
+        "--tier-names-file",
+        type=str,
+        required=False,
+        help="Path to a file containing tier names (one per line)",
+    )
     
     return parser.parse_args()
 
@@ -298,17 +307,34 @@ def main():
     
     ## data_dir contains subfolders, we process each subfolder by looping over them
     if args.data_dir:
+        # maintain a common tier names pool across a run
+        if args.tier_names_file:
+            tier_names_path = Path(args.tier_names_file)
+            if not tier_names_path.exists():
+                print(f"Tier names file {tier_names_path} does not exist.")
+                sys.exit(1)
+            with open(tier_names_path, 'r', encoding='utf-8') as f:
+                tier_names = [line.strip() for line in f.readlines() if line.strip()]
+        else:
+            tier_names = []
         for subfolder in data_dir.iterdir():
             if subfolder.is_dir():
                 print(f"Processing subfolder: {subfolder}")
                 sub_output_dir = output_dir / subfolder.name
                 os.makedirs(sub_output_dir, exist_ok=True)
                 os.makedirs(sub_output_dir / "segments", exist_ok=True)
-                TextGrid_to_Wav(
+                tier_names = TextGrid_to_Wav(
                     data_folder=str(subfolder),
                     output_audio_folder=str(sub_output_dir),
                     corr_map=corr_map,
+                    tier_names=tier_names,
                 ) 
+        # save the tier names to a file in output_dir
+        tier_names_path = output_dir / "tier_names.txt"
+        with open(tier_names_path, 'w', encoding='utf-8') as f:
+            for name in tier_names:
+                f.write(name + '\n')
+        print(f"Tier names saved to {tier_names_path}")
     
     # If tokenizer is provided, generate character mapping file and new vocab file
     if args.tokenizer:
