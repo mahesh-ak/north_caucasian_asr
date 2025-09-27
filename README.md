@@ -17,9 +17,14 @@ If no such file is given to `src/data.py`, it is automatically generated based o
 This file should have columns `src`, `dst` and `type`
 `type` should be in `cyrillic`, `mixed`, `unclear`, `delimiter`, `glossing`, `punctuation`
 
+> Sample command for data processing
+
+ `python src/data.py --data-dir data/Rutul --char-map-file processed_data/Rutul/char_map_annotated.tsv --tokenizer ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --tier-names-file processed_data/Rutul/tier_names.txt`
+
 
 ## To do
 
 * Fix delimiter issue with tokenizers
+* Add feature to handle Archi data
 * Fix identifier for tiers containing IPA transcripts
 * Fix the notation of `data/<LANG>/char_map.tsv` file

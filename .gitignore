@@ -209,6 +209,7 @@ __marimo__/
 # Data files
 data/
 processed_data/
+tokenized_data/
 
 # Model files
 models/
