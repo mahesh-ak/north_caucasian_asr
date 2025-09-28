@@ -80,7 +80,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                         print(f"WAV file not found for {textgrid_path}")
                         continue
 
-                # Load the corresponding audio
+                # Load the corresponding audio, sample rate conversion to 16kHz
                 audio = AudioSegment.from_file(wav_path, format="wav").set_frame_rate(16000)
 
                 # Load the TextGrid annotations
@@ -96,7 +96,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                         contents = ' | '.join([interval.mark for interval in tier.intervals[:3]])
                         print(f"   Contents: {contents} ...")
                         
-                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple): ")
+                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple -1 to skip): ")
                     ## convert to list of int
                     tier_idxs = [int(x) for x in tier_idxs.split(',')]
                     if -1 in tier_idxs:
@@ -114,7 +114,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                         ## print first 3 contents concatenated
                         contents = ' | '.join([interval.mark for interval in tier.intervals[:3]])
                         print(f"   Contents: {contents} ...")
-                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple): ")
+                    tier_idxs = input("Enter the index of the tier to use for transcription (separated by , in case of multiple and -1 to skip): ")
                     ## convert to list of int
                     tier_idxs = [int(x) for x in tier_idxs.split(',')]
                     if -1 in tier_idxs:
@@ -324,7 +324,7 @@ def main():
         )
         
         ## save the vocab to a json file
-        vocab = {"<pad>": 0, "<unk>": 1, "<s>": 2, "</s>": 3}
+        vocab = {"<pad>": 0, "<unk>": 1, "<s>": 2, "</s>": 3, "|": 4}
 
         init_no = max([v for k,v in vocab.items()]) + 1
         for i, c in enumerate(CHARS):

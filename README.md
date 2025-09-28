@@ -21,10 +21,15 @@ This file should have columns `src`, `dst` and `type`
 
  `python src/data.py --data-dir data/Rutul --char-map-file processed_data/Rutul/char_map_annotated.tsv --tokenizer ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --tier-names-file processed_data/Rutul/tier_names.txt`
 
+> Sample command for tokenized data creation
+
+ `python src/pre_process.py --data-dir processed_data/Rutul --processor ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --new-tokenizer custom`
+
 
 ## To do
 
-* Fix delimiter issue with tokenizers
+* Create mapping from processed to tokenized data
+* Take note of the delimiter '#' of the default model (ctaguchi)
 * Add feature to handle Archi data
 * Fix identifier for tiers containing IPA transcripts
-* Fix the notation of `data/<LANG>/char_map.tsv` file
+* Fix the notation of `data/<LANG>/char_map.tsv` f
