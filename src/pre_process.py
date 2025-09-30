@@ -80,8 +80,8 @@ def tokenize_transcripts(data_dir, processor, output_dir, word_delimiter_token="
         
         
         for ds_name, dataset in datasets:
-            # Map the dataset with the processor
-            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token), remove_columns=dataset.column_names)
+            # Map the dataset with the processor, retain these columns: textgrid_path, tier_name, interval_id for traceability or remove audio_path and transcript
+            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
             # Save the processed dataset
             dataset.save_to_disk(output_dir / ds_name)
             print(f"Saved {ds_name} dataset to {output_dir / ds_name}")

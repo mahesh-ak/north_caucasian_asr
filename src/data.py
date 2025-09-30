@@ -60,7 +60,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
             
     with open(csv_file, mode="w", newline='', encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["audio_path", "transcript"])  # header row
+        writer.writerow(["audio_path", "transcript", "textgrid_path", "tier_name", "interval_id"])  # header row
 
         # Process each TextGrid file in the folder
         
@@ -132,7 +132,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                     if not tier.name in current_tier_names:
                         continue
                     segment_index = 0
-                    for interval in tier.intervals:
+                    for i, interval in enumerate(tier.intervals):
                         # Use the 'mark' attribute (or 'text' if your TextGrid uses that field)
                         transcript = interval.mark.strip()
                         if corr_map:
@@ -155,7 +155,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                         segment_audio.export(segment_path, format="wav")
 
                         # Write the file path and transcript to CSV
-                        writer.writerow([segment_path, transcript])
+                        writer.writerow([segment_path, transcript, textgrid_path, tier.name, i])
                         segment_index += 1
 
     print(f"Dataset preparation complete. CSV saved to {csv_file}")
@@ -168,7 +168,7 @@ def GenerateCharMap(tokenizer_name, output_path, output_audio_folder):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     
     # Read the dataset.csv file from each subfolder of output_audio_folder and concatenate them
-    dataset_df = pd.DataFrame(columns=['audio_path', 'transcript'])
+    dataset_df = pd.DataFrame(columns=['transcript'])
     for subfolder in Path(output_audio_folder).iterdir():
         # exclude test folders with name Gold or gold
         if subfolder.name.lower() in ['gold']:
@@ -177,7 +177,7 @@ def GenerateCharMap(tokenizer_name, output_path, output_audio_folder):
             csv_path = subfolder / "dataset.csv"
             if csv_path.exists():
                 df = pd.read_csv(csv_path)
-                dataset_df = pd.concat([dataset_df, df], ignore_index=True)
+                dataset_df = pd.concat([dataset_df, df[['transcript']]], ignore_index=True)
 
     # Get all unique characters in the transcripts
     chars = []
