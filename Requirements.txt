@@ -6,3 +6,6 @@ datasets==4.1.1
 pydub==0.25.1
 textgrid==1.6.1
 librosa==0.11.0
+evaluate==0.4.6
+jiwer==4.0.0
+matplotlib==3.10.6

@@ -29,9 +29,9 @@ def prepare_dataset(batch, processor, word_delimiter_token):
     
     # Process transcript for IPA, first condense multiple spaces to single space
     batch["transcript"] = ' '.join(batch["transcript"].strip().split())
-    batch["transcript"] = batch["transcript"].replace(' ', word_delimiter_token)
+    batch["labels"] = batch["transcript"].replace(' ', word_delimiter_token)
     with processor.as_target_processor():
-        batch["labels"] = processor(batch["transcript"]).input_ids
+        batch["labels"] = processor(batch["labels"]).input_ids
     
     return batch
 
