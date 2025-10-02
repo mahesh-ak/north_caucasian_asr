@@ -8,6 +8,7 @@ import numpy as np
 import os
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
+import json
 
 def space_separate(sent):
     # Separate phonemes in a given sentence
@@ -158,7 +159,11 @@ def compute_char_stats(pred_str, ref_str):
     recall = N / (N + S + D) if (N + S + D) > 0 else 0
     f1 = 2*precision*recall / (precision+recall) if (precision+recall) > 0 else 0
 
-    labels = sorted(set(y_true + y_pred))
+    labels = list(set(y_true + y_pred))
+    # sort labels by unicode value, with <eps> at first
+    labels = sorted([l for l in labels if l != "<eps>"])
+    labels = ["<eps>"] + labels
+
     cm = confusion_matrix(y_true, y_pred, labels=labels)
 
     return {
@@ -166,9 +171,9 @@ def compute_char_stats(pred_str, ref_str):
         "precision": precision,
         "recall": recall,
         "f1": f1,
-        "confusion_labels": sorted(labels),
-        "confusion_matrix": cm,
-        "classification_report": classification_report(y_true, y_pred, labels=labels, zero_division=0, output_dict=True)
+        "classification_report": classification_report(y_true, y_pred, labels=labels, zero_division=0, output_dict=True),
+        "confusion_labels": labels,
+        "confusion_matrix": cm
     }
 
 
@@ -186,8 +191,14 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     ax.set_xticklabels(labels)
     ax.set_yticklabels(labels)
 
+    # set minor ticks and grid
+    ax.set_xticks(np.arange(-0.5, len(labels), 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, len(labels), 1), minor=True)
+    ax.grid(which="minor", color="black", linestyle='-', linewidth=0.5)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    
     ax.set_xlabel("Predicted")
-    ax.set_ylabel("Gold")
+    ax.set_ylabel("True")
     plt.title(title)
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
@@ -214,18 +225,26 @@ def compute_metrics(pred, processor, tokenized_dataset, save_results=False, resu
 
     if save_results:
         os.makedirs(results_folder, exist_ok=True)
-        with open(os.path.join(results_folder, "predictions.txt"), "w") as f:
-            for p in pred_str:
-                f.write(p + "\n")
-        with open(os.path.join(results_folder, "references.txt"), "w") as f:
-            for r in ref_str:
-                f.write(r + "\n")
-        # optionally save confusion matrix
-        np.savetxt(os.path.join(results_folder, "confusion_matrix.csv"), 
-                   char_stats["confusion_matrix"], delimiter=",", fmt="%d")
+        # store references and predictions in a single tsv
+        with open(os.path.join(results_folder, "predictions.tsv"), "w", encoding="utf-8") as f:
+            f.write("Reference\tPrediction\n")
+            for r, p in zip(ref_str, pred_str):
+                f.write(f"{r}\t{p}\n")
     
-    return {
-        "wer": wer_val,
-        "cer": cer_val,
-        "char_stats": char_stats
-    }
+        # plot confusion matrix, with labels sorted by unicode value, <eps> at first
+        plot_confusion_matrix(char_stats["confusion_matrix"], char_stats["confusion_labels"], 
+                              title="Normalized Phoneme Confusion Matrix", 
+                              savepath=os.path.join(results_folder, "confusion_matrix.png"))
+        
+        stats_dict = {
+            "wer": wer_val,
+            "cer": cer_val,
+            "char_stats": char_stats
+        }
+
+
+        # save out_dict as json
+        with open(os.path.join(results_folder, "stats.json"), "w", encoding="utf-8") as f:
+            json.dump(stats_dict, f, indent=4, ensure_ascii=False)
+    
+    return {"wer": wer_val, "cer": cer_val, "char_f1": char_stats["f1"]}
