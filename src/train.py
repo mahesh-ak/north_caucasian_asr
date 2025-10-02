@@ -78,6 +78,7 @@ def main():
         learning_rate=3e-4,
         save_total_limit=2,
         push_to_hub=False,
+        ddp_find_unused_parameters=False if torch.cuda.device_count() > 1 else None,
     )
 
     # define data collator

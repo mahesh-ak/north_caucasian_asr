@@ -28,7 +28,7 @@ This file should have columns `src`, `dst` and `type`
 
 ## To do
 
-* Create mapping from processed to tokenized data - use it to compute metrics rather than tokenized labels
+* run training with accelerate
 * Take note of the delimiter '#' of the default model (ctaguchi)
 * Add feature to handle Archi data
 * Fix identifier for tiers containing IPA transcripts
