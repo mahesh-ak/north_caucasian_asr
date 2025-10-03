@@ -178,12 +178,22 @@ def compute_char_stats(pred_str, ref_str):
 
 
 def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix", cmap="Blues", savepath=None):
+    # replace label <eps> with - (hyphen)
+    labels = ["-" if l == "<eps>" else l for l in labels]
+    
+    # Normalize confusion matrix by row
     cm_norm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
     cm_norm = np.nan_to_num(cm_norm)
 
     fig, ax = plt.subplots(figsize=(10, 8))
     im = ax.imshow(cm_norm, interpolation="nearest", cmap=cmap)
 
+    # reduce font size of ticks if too many labels
+    if len(labels) > 20:
+        plt.xticks(fontsize=8)
+        plt.yticks(fontsize=8)
+    
+    
     plt.colorbar(im, ax=ax, label="Proportion")
 
     ax.set_xticks(np.arange(len(labels)))
@@ -200,7 +210,6 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
     plt.title(title)
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     plt.tight_layout()
     if savepath:
@@ -248,4 +257,4 @@ def compute_metrics(pred, processor, tokenized_dataset, save_results=False, resu
         with open(os.path.join(results_folder, "stats.json"), "w", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=4, ensure_ascii=False)
     
-    return {"wer": wer_val, "cer": cer_val, "char_f1": char_stats["f1"]}
+    return {"wer": round(wer_val,3), "cer": round(cer_val,3), "char_f1": round(char_stats["f1"],3)}
