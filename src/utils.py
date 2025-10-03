@@ -243,6 +243,7 @@ def compute_metrics(pred, processor, tokenized_dataset, save_results=False, resu
         }
 
 
+        stats_dict["char_stats"]["confusion_matrix"] = stats_dict["char_stats"]["confusion_matrix"].tolist()		
         # save out_dict as json
         with open(os.path.join(results_folder, "stats.json"), "w", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=4, ensure_ascii=False)

@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from utils import *
-from datasets import load_dataset_from_disk
+from datasets import load_from_disk
 from transformers import AutoModelForCTC, TrainingArguments, Trainer, AutoProcessor
 import torch
 
@@ -58,7 +58,7 @@ def main():
     num_epochs = args.num_epochs
     
     print(f"Loading dataset from {data_dir}")
-    tokenized_dataset = load_dataset_from_disk(data_dir)
+    tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
     
     print(f"Loading model and processor from {model_name}")
     model = AutoModelForCTC.from_pretrained(model_name)
@@ -66,7 +66,7 @@ def main():
     
     # define training args
     training_args = TrainingArguments(
-        output_dir=results_dir,
+        output_dir=model_name,
         group_by_length=True,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
@@ -78,7 +78,7 @@ def main():
         learning_rate=3e-4,
         save_total_limit=2,
         push_to_hub=False,
-        ddp_find_unused_parameters=False if torch.cuda.device_count() > 1 else None,
+#        ddp_find_unused_parameters=True if torch.cuda.device_count() > 1 else None,
     )
 
     # define data collator
@@ -89,9 +89,9 @@ def main():
         model=model,
         data_collator=data_collator,
         args=training_args,
-        compute_metrics= lambda pred: compute_metrics(pred, processor, tokenized_dataset['dev']),
+        compute_metrics= lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation']),
         train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["dev"],
+        eval_dataset=tokenized_dataset["validation"],
         tokenizer=processor.feature_extractor,
     )
 
