@@ -28,7 +28,7 @@ This file should have columns `src`, `dst` and `type`
 
 ## To do
 
-* run training with accelerate
+* Fix the problem of non-reproducible results
 * Take note of the delimiter '#' of the default model (ctaguchi)
 * Add feature to handle Archi data
 * Fix identifier for tiers containing IPA transcripts

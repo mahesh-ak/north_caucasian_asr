@@ -64,9 +64,17 @@ def main():
     model = AutoModelForCTC.from_pretrained(model_name)
     processor = AutoProcessor.from_pretrained(model_name)
     
+    ## output_dir is model_name if model_name is a path, else create a directory in results_dir
+    if Path(model_name).exists():
+        output_dir = model_name
+    else:
+        model_name_short = model_name.split("/")[-1]
+        output_dir = Path('models') / data_dir.parts[1] / model_name_short
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
     # define training args
     training_args = TrainingArguments(
-        output_dir=model_name,
+        output_dir=output_dir,
         group_by_length=True,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
@@ -78,7 +86,6 @@ def main():
         learning_rate=3e-4,
         save_total_limit=2,
         push_to_hub=False,
-#        ddp_find_unused_parameters=True if torch.cuda.device_count() > 1 else None,
     )
 
     # define data collator
