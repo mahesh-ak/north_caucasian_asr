@@ -12,6 +12,7 @@ from transformers import AutoTokenizer
 import random
 import json
 from utils import *
+import pympi
 
 cyrillic = "АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯяр"
 
@@ -47,7 +48,7 @@ class CorrMap:
 
 
 
-def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
+def TextGrid_EAF_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
     # Convert TextGrid annotations to segmented WAV files and create a CSV mapping file.
     # CSV file to store mapping from segment file to transcript
     csv_file = os.path.join(output_audio_folder, "dataset.csv")
@@ -70,6 +71,7 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
         
         for file in tqdm(os.listdir(data_folder)):
             if file.lower().endswith(".textgrid"):
+
                 base_name = os.path.splitext(file)[0]
                 textgrid_path = os.path.join(data_folder, file)
                 wav_path = os.path.join(data_folder, base_name + ".wav")
@@ -123,10 +125,8 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                     for tier_idx in tier_idxs:
                         tier_names.append(tg.tiers[tier_idx].name)
                         current_tier_names.append(tg.tiers[tier_idx].name)
-
-                else:
-                    if len(current_tier_names) > 1:
-                        print(f"Warning! Multiple matching tier names found in {textgrid_path}: {current_tier_names}")
+                elif len(current_tier_names) > 1:
+                    print(f"Warning! Multiple matching tier names found in {textgrid_path}: {current_tier_names}")
                         
                 for tier in tg.tiers:
                     if not tier.name in current_tier_names:
@@ -157,6 +157,84 @@ def TextGrid_to_Wav(data_folder, output_audio_folder, corr_map, tier_names):
                         # Write the file path and transcript to CSV
                         writer.writerow([segment_path, transcript, textgrid_path, tier.name, i])
                         segment_index += 1
+            # add support of .eaf files
+            elif file.lower().endswith(".eaf"):
+                base_name = os.path.splitext(file)[0]
+                file_path = os.path.join(data_folder, file)
+                wav_path = os.path.join(data_folder, base_name + ".wav")
+                if not os.path.exists(wav_path):
+                    wav_path = os.path.join(data_folder, base_name + ".WAV")
+                    if not os.path.exists(wav_path):
+                        print(f"WAV file not found for {file_path}")
+                        continue
+
+                audio = AudioSegment.from_file(wav_path, format="wav").set_frame_rate(16000)
+                eaf = pympi.Elan.Eaf(file_path)
+
+                # Determine tier names (human input if first file)
+                if len(tier_names) == 0:
+                    print(f"Tier names in {file_path}:")
+                    list_tier_names = list(eaf.get_tier_names())
+                    for idx, tier_name in enumerate(list_tier_names):
+                        try:
+                            annotations = eaf.get_annotation_data_for_tier(tier_name)
+                        except KeyError:
+                            print(f"Skipping referenced/non-alignable tier: {tier_name}")
+                            continue
+                        # Take first 3 transcripts and concatenate
+                        examples = ' | '.join([ann[2] for ann in annotations[:3]])
+                        print(f"{idx}: {tier_name}: {examples} ...")
+                    tier_input = input("Enter the index of tiers to use (comma-separated, leave empty to skip): ")
+                    if tier_input.strip() == "":
+                        print(f"Skipping file {file_path}")
+                        continue
+                    selected_tiers = [list_tier_names[int(x)] for x in tier_input.split(",")]
+                    tier_names.extend(selected_tiers) 
+
+                current_tier_names = [tier for tier in eaf.get_tier_names() if tier in tier_names]
+                if len(current_tier_names) == 0:
+                    if len(tier_names) == 0:
+                        print(f"Tier names in {file_path}:")
+                        list_tier_names = list(eaf.get_tier_names())
+                        for idx, tier_name in enumerate(list_tier_names):
+                            try:
+                                annotations = eaf.get_annotation_data_for_tier(tier_name)
+                            except KeyError:
+                                print(f"Skipping referenced/non-alignable tier: {tier_name}")
+                                continue
+                            # Take first 3 transcripts and concatenate
+                            examples = ' | '.join([ann[2] for ann in annotations[:3]])
+                            print(f"{idx}: {tier_name}: {examples} ...")
+                        tier_input = input("Enter the index of tiers to use (comma-separated, leave empty to skip): ")
+                        if tier_input.strip() == "":
+                            print(f"Skipping file {file_path}")
+                            continue
+                        selected_tiers = [list_tier_names[int(x)] for x in tier_input.split(",")]
+                        tier_names.extend(selected_tiers) 
+                        current_tier_names.extend(selected_tiers)
+                elif len(current_tier_names) > 1:
+                    print(f"Warning! Multiple matching tier names found in {file_path}: {current_tier_names}")
+
+                for tier_name in current_tier_names:
+                    annotations = eaf.get_annotation_data_for_tier(tier_name)
+                    for idx, (start_time, end_time, transcript) in enumerate(annotations):
+                        transcript = transcript.strip()
+                        if corr_map:
+                            transcript = corr_map.correct(transcript)
+                        if transcript == "":
+                            continue
+
+                        start_ms = int(start_time)
+                        end_ms = int(end_time)
+                        if (end_ms - start_ms) < 150:
+                            continue
+
+                        segment_audio = audio[start_ms:end_ms]
+                        segment_filename = f"{base_name}_segment{idx}.wav"
+                        segment_path = os.path.join(output_audio_folder,"segments", segment_filename)
+                        segment_audio.export(segment_path, format="wav")
+
+                        writer.writerow([segment_path, transcript, file_path, tier_name, idx])
 
     print(f"Dataset preparation complete. CSV saved to {csv_file}")
     return tier_names
@@ -300,7 +378,7 @@ def main():
                 sub_output_dir = output_dir / subfolder.name
                 os.makedirs(sub_output_dir, exist_ok=True)
                 os.makedirs(sub_output_dir / "segments", exist_ok=True)
-                tier_names = TextGrid_to_Wav(
+                tier_names = TextGrid_EAF_to_Wav(
                     data_folder=str(subfolder),
                     output_audio_folder=str(sub_output_dir),
                     corr_map=corr_map,

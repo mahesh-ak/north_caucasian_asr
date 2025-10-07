@@ -1,0 +1,54 @@
+src	dst	type	count	sample_wordforms
+š	ʃ	replace	1372	šuwna ǯac'abiše habištɨ habišis ašipkabɨr... šejtʼanad rišina habišexa wišira, wiširdiš
+.		punctuation	1030	litxur. mu|q'a... kilobɨr. min... kʲaaraj. madiš. minowdaa... halgara. quʁuˁra. je.
+,		punctuation	1024	rɨˁχɨra, ruxaraxʷa, hanowus, momenta, ɢušim, dülqerij, waχtɨje=xʷa, qɨdxɨr, kidxirijden, ǯuu,
+ǯ	d͡ʒ	replace	408	ǯiqʼid ǯura ǯüda ǯa ǯu beǯ ǯuduxa ǯudu. azerbajǯanskij ǯigɨj:
+ˁ	ˤ	replace	297	haˁapbiše naˁχbarka qʼaˁsa raˁhman naˁχadijiq'ama qʼɨˁči aˁkaˁjetad haˁr… mɨslʲaˁʔat χaˁr
+\i-	ɨ	replace	248	aq'ald\i- X\i-l h\i-w\i-r adišd\i-, karb\i-r w\i-d\i- ab\i-rl\i-, hac'ar\i-ma? pisd\i- мол\\
+č	t͡ʃ	replace	240	čatɨn čapaldɨ čʼabalešdɨ χačʼirχɨr, GačaX leqečʼur, gičʼera jičʼedeka eč lebčura
+=		punctuation	174	riʔij=xʷa, paččaʁ=na hile=jden i=xur xur=xʷa, raˁʁad=xa χaldɨ=ka. susus=xa ij=xʷa, hɨʔɨraj=xʷa
+ü	y	replace	156	ǯüduχud düzdaʔara ledübʁürij, qʼüdhüra. düz südqʼüjne ɢüšimara=xʷa süpelmarad sürgündiš süt
+?		glossing	83	ti\?g halgɨrɨma? haʔasdɨ? telʲman? a? lav\?g\i-r geRira\?g ješikbɨr? ʁubaʁmar? mi?
+/		punctuation	76	salamat// ix// tan// r//... min// mi// ijulʲ// prat// // pol//
+ž	ʒ	replace	45	služit žizni režɨm wazmožnost' možet žeskiy bagažnika uvažat dolgažiteljnica prodolžat'
+1		cyrillic	44	к1ыды г1/гьымыъ саргьа1тбыр йирк1ыр г1ыкысе к1иркьыр г1акуйне сиг1ыд χ1ibɨd саджиг1ил
+[		punctuation	41	[...] [značit], [...]. [нрзб] [χana...] [mid]. [tu...] [tinʲa [ǯi...] im[R]
+]		punctuation	40	[ǯudɨ] [fsʲo] [mid]. [ǯi...] [značit], [] [ili] А] а] это]
+)		punctuation	31	(tʼa...) (xa?) h)aʁowus )арака, (Лера:) (xur) ...(?) (са) (йид) waχt)
+(		punctuation	31	(nu?) (Лера, (aʔ) (wijaʔ (cat'bɨr (са) (в (tʼa...) игит( (xa?)
+R	ʁ	replace	28	Ramazana [R jaRmiškilšimb\i-r jaRmišdaʔara Raguga im[R] hemiRiRad\i-jex\i-r geRira\?g geRerč'us RurRa
+X	χ	replace	26	uliXda iXadkald\i- Xaq'as suruXlad\i- lejiX wiXd\i- GačaX Xajir naˁXan Xajiš
+"		punctuation	25	"раз" "пьяный" "пьяна" "a "зад "šuw свидания" "давай" qurʁusdiš" дыгараа?"
+<		punctuation	20	<mada <> <?> <k> <nrzb> <unclear> <xur> <ʁɨʁ> <gah> <unclear>,
+>		punctuation	20	<?> <unclear>, <xur> <k> <nrzb> <ʁɨʁ> uquχur> <če> <> <unclear>
+:	ː	replace	18	wa: a: ǯigɨj: diš: (Лера:) χulkara: a:ladhʷa waara: ma: ma:had
+A	a	replace	15	Abdulla Awalajdɨ Awalaj Awalais Abdullara Allaχ, Abdullas Allahad Allahara A
+G	ɢ	replace	14	G\i-r\i-c' Gačaxwald\i- Gaq' gʲaGa GačaX Guruwuruurij Gačax gʲaraG GačaXad Garijera
+M	m	replace	11	Mirzaχaɨs, Magaldɨ Maˁhaˁmaˁd Mirzaχan Miχri ɢM
+|	ˤ	replace	9	mu|q'a... ma|Rʷ, a|ǯizd\i- q'a|rd\i- r\i-|x\i-ra muq|ud u|rxud, mu|q'a mu|qa
+ä	æ	replace	9	läna lä sä irajχän,
+N	n	replace	8	Nowgorodde Nik'alaj Nikolajdɨ Nikolaj Nizir-baba, Nikalaj
+!		punctuation	8	xɨdɨlnowa! большое! χačʼirχɨra! wɨlcʼara! guzel! suwqʼura! xur!
+I	i	replace	5	Ibram Idɨlʲ-adxa, I
+ö	ø	replace	4	kulönka qʼöölmɨ kulönkaja
+γ	ɣ	replace	4	wɨγliraxa wɨγɨl, wɨγlešis wɨγlira
+S	s	replace	4	Stroitelnɨj Salman
+*		punctuation	4	***) xujne*
+U	u	replace	4	Uraza-bajram, dUtmiš Uslowno
+…		punctuation	3	duruʔus… wiʔi… haˁr…
+H	h	replace	3	Hawalaj Ha
+D	d	replace	2	Daɣistande Daʁɨstandɨ
+ǧ	d͡ʒ	replace	2	wɨǧle wɨǧleše
+B	b	replace	2	Babaj
+T	t	replace	2	Tɨ Ti
+K	k	replace	2	Kurban-bajram
+W	w	replace	2	Wali-baba uxurxWa
+O	o	replace	1	Oktjabrь
+V	v	replace	1	Vilikiy
+;		punctuation	1	сывара;
+Р	p	replace	1	Рамазан
+E	e	replace	1	Eto
+L	l	replace	1	Litxujne
+\		punctuation	0	
+'	ʼ	replace	0	
+-		punctuation	267	кьу- xeR\i-lera где-то хыных- Rargʷar\i-ma hemiRiRad\i-jex\i-r q\i-w\i-lc'ara X\i-l haz\i-rd\i- qiq'as\i-
