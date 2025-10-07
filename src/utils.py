@@ -50,6 +50,9 @@ class DataCollatorCTCWithPadding:
         # different padding methods
         input_features = [{"input_values": feature["input_values"]} for feature in features]
         label_features = [{"input_ids": feature["labels"]} for feature in features]
+        # handle additional id field
+        if "id" in features[0]:
+            id_features = [{"id": feature["id"]} for feature in features]
 
         batch = self.processor.pad(
             input_features,
@@ -66,6 +69,10 @@ class DataCollatorCTCWithPadding:
         # Replace padding with -100 to ignore loss correctly
         labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
 
+        # id shouldn't be padded as it is just an index
+        if "id" in features[0]:
+            batch["id"] = torch.tensor([f["id"] for f in id_features], dtype=torch.long)
+            
         batch["labels"] = labels
 
         return batch
@@ -159,6 +166,9 @@ def compute_char_stats(pred_str, ref_str):
     recall = N / (N + S + D) if (N + S + D) > 0 else 0
     f1 = 2*precision*recall / (precision+recall) if (precision+recall) > 0 else 0
 
+    # compute error rate
+    per = (S + D + I) / (N + S + D + I) if (N + S + D + I) > 0 else 0
+
     labels = list(set(y_true + y_pred))
     # sort labels by unicode value, with <eps> at first
     labels = sorted([l for l in labels if l != "<eps>"])
@@ -171,6 +181,7 @@ def compute_char_stats(pred_str, ref_str):
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "per": per,
         "classification_report": classification_report(y_true, y_pred, labels=labels, zero_division=0, output_dict=True),
         "confusion_labels": labels,
         "confusion_matrix": cm
@@ -189,10 +200,10 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     im = ax.imshow(cm_norm, interpolation="nearest", cmap=cmap)
 
     # reduce font size of ticks if too many labels
-    if len(labels) > 40:
+    if len(labels) > 60:
         plt.xticks(fontsize=4)
         plt.yticks(fontsize=4)
-    elif len(labels) > 20:
+    elif len(labels) > 30:
         plt.xticks(fontsize=8)
         plt.yticks(fontsize=8)
     
@@ -221,14 +232,17 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
 
 
 def compute_metrics(pred, processor, tokenized_dataset, save_results=False, results_folder="results/default"):
-    pred_logits = pred.predictions
+    pred_logits = pred.predictions["logits"]
     pred_ids    = np.argmax(pred_logits, axis=-1)
 
-    pred_str  = processor.batch_decode(pred_ids)
+    # decode pred_ids to strings and skip special tokens
+    pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
     pred_str = [s.replace('#', ' ') for s in pred_str]
 
-    ref_str = list(tokenized_dataset["transcript"])
-    
+    # obtain ref_str from tokenized_dataset and align with pred_str using ids
+    id_to_ref = {i: t for i, t in zip(tokenized_dataset["id"], tokenized_dataset["transcript"])}
+    ref_str = [id_to_ref[i] for i in pred.predictions["id"]]
+     
     wer_val = wer_metric.compute(predictions=pred_str, references=ref_str)
     cer_val = cer_metric.compute(predictions=pred_str, references=ref_str)
 
@@ -260,4 +274,4 @@ def compute_metrics(pred, processor, tokenized_dataset, save_results=False, resu
         with open(os.path.join(results_folder, "stats.json"), "w", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=4, ensure_ascii=False)
     
-    return {"wer": round(wer_val,3), "cer": round(cer_val,3), "char_f1": round(char_stats["f1"],3)}
+    return {"wer": round(wer_val,3), "cer": round(cer_val,3), "per": round(char_stats["per"],3)}

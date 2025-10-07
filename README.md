@@ -25,11 +25,13 @@ This file should have columns `src`, `dst` and `type`
 
  `python src/pre_process.py --data-dir processed_data/Rutul --processor ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --new-tokenizer custom`
 
+> Sample command for training and evaluating with multiple GPUs
+
+ `torchrun --nproc_per_node=2 src/train.py --model-dir models/Rutul/custom/ --data-dir tokenized_data/Rutul/custom/ --num-epochs 5 --batch-size 1`
+
 
 ## To do
 
-* Fix the problem of non-reproducible results
-* Take note of the delimiter '#' of the default model (ctaguchi)
 * Add feature to handle Archi data
 * Fix identifier for tiers containing IPA transcripts
 * Fix the notation of `data/<LANG>/char_map.tsv` f

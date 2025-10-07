@@ -5,7 +5,7 @@ import sys
 import pandas as pd
 import json
 from sklearn.model_selection import train_test_split
-from transformers import Wav2Vec2Processor, Wav2Vec2CTCTokenizer, AutoProcessor
+from transformers import Wav2Vec2CTCTokenizer, AutoProcessor
 import librosa
 from datasets import Dataset
 
