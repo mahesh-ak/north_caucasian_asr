@@ -35,19 +35,23 @@ def prepare_dataset(batch, processor, word_delimiter_token):
     
     return batch
 
-def tokenize_transcripts(data_dir, processor, output_dir, word_delimiter_token="|"):
+def tokenize_transcripts(data_dir, processor, output_dir, split_file, word_delimiter_token="|"):
     data_dir = Path(data_dir)
     output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     # A directory is usually structured with subfolders each containing a dataset.csv
     # Subfolder allocated to train, test should be present in data_dir / split.json with structure {'train': ['subfolder1', 'subfolder2'], 'test': ['subfolder3']}
-    split_file = data_dir / "split.json"
+    split_file = Path(split_file)
     if not split_file.exists():
         print(f"Split file {split_file} does not exist. Exiting.")
         sys.exit(1)
     
     splits = json.load(open(split_file))
+    # get the name without extension and preceeding path, e.g. data/Rutul/ --->
+    split_name = split_file.stem
+    output_dir = output_dir / split_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     for split, subfolders in splits.items():
         # create an list of dfs and concatenate all transcripts
         dfs = []
@@ -78,13 +82,13 @@ def tokenize_transcripts(data_dir, processor, output_dir, word_delimiter_token="
             test_dataset = Dataset.from_pandas(all_transcripts_df)
             datasets = [(split, test_dataset)]
         
-        
+
         for ds_name, dataset in datasets:
             # Map the dataset with the processor, retain these columns: textgrid_path, tier_name, interval_id for traceability or remove audio_path and transcript
             dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
-            # Save the processed dataset
+            # Save the processed dataset to output_dir / ds_name
             dataset.save_to_disk(output_dir / ds_name)
-            print(f"Saved {ds_name} dataset to {output_dir / ds_name}")
+            print(f"Saved {ds_name} dataset with {len(dataset)} samples to {output_dir / ds_name}")
     
 
 def parse_args():
@@ -114,6 +118,13 @@ def parse_args():
         type=str,
         required=False,
         help="Name for the new tokenizer to be created based on vocab.json in data_dir.",
+    )
+    
+    parser.add_argument(
+        "--split-file",
+        type=str,
+        default="data/split1.json",
+        help="Path to the JSON file defining train/test splits.",
     )
     
     parser.add_argument(
@@ -150,8 +161,8 @@ def main():
                                         model_max_length=1024)        
 
         processor.tokenizer = tokenizer
-        ## save processor to models / data_dir.parts[1:] / args.new_tokenizer
-        save_dir = Path("models") / Path(*data_dir.parts[1:]) / args.new_tokenizer
+        ## save processor to models / data_dir.parts[1:] / args.new_tokenizer / split_name
+        save_dir = Path("models") / Path(*data_dir.parts[1:]) / args.new_tokenizer / Path(args.split_file).stem
         save_dir.mkdir(parents=True, exist_ok=True)
         processor.save_pretrained(save_dir)
         print(f"Saved new processor to {save_dir}")
@@ -166,7 +177,7 @@ def main():
         output_dir.mkdir(parents=True, exist_ok=True)
         
     print(f"Using tokenizer with vocab size: {processor.tokenizer.vocab_size}")
-    tokenize_transcripts(data_dir, processor, output_dir, args.word_delimiter_token)
+    tokenize_transcripts(data_dir, processor, output_dir, args.split_file, args.word_delimiter_token)
     
 if __name__ == "__main__":
     main()

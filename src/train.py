@@ -28,7 +28,7 @@ def parse_args():
         "--results-dir",
         type=str,
         required=False,
-        help="Directory to save the training results. If not provided, results will be saved in results/<lang>/<model_name>, <lang> is inferred from data_dir name, model_name is inferred from model argument.",
+        help="Directory to save the training results. If not provided, results will be saved in results/<lang>/<model_name>/<split_name>, <lang> and <split_name> is inferred from data_dir name, model_name is inferred from model argument.",
     )
     parser.add_argument(
         "--batch-size",
@@ -67,9 +67,9 @@ def main():
     model_name = args.model_dir
     data_dir = Path(args.data_dir)
     
-    ## data_dir format: tokenized_data/<lang>/<partial_model_name>/ and contains subdirs train, dev, test
+    ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
-    results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:3])
+    results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
     results_dir.mkdir(parents=True, exist_ok=True)
     
     batch_size = args.batch_size
@@ -99,8 +99,7 @@ def main():
     if Path(model_name).exists():
         output_dir = model_name
     else:
-        model_name_short = model_name.split("/")[-1]
-        output_dir = Path('models') / data_dir.parts[1] / model_name_short
+        output_dir = Path('models') / Path(*data_dir.parts[1:])
         output_dir.mkdir(parents=True, exist_ok=True)
         model.config.bos_token_id = processor.tokenizer.bos_token_id
         model.config.eos_token_id = processor.tokenizer.eos_token_id
