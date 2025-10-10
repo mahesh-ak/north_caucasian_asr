@@ -1,0 +1,41 @@
+src	dst	type	count	sample_wordforms
+̄Ӏʼ	ʼːˤ	replace	1	iq̄Ӏʼ+
+̄ʼ	ʼː	replace	57	imc̄ʼīnu waq̄ʼōtʼu bec̄ʼōtʼuši hoc̄ʼaɬ̄ašmun. hoc̄ʼaɬ̄ašmunnur hoc̄ʼaɬ̄ašdu daq̄ʼōtʼu",— bac̄ʼarši aq̄ʼuli bec̄ʼut̄ummis
+̄	ː	replace	1061	suwk̄uli s̄āru s̄ijʁat "wak̄isu,— bac̄ʼas bot̄ut ert̄ili imc̄ʼu?” χ̄Ӏon+ ʟʼinčʼas̄
+,		punctuation	879	joχ, cʼohōru, et̄ili, kuwšuli, χ̄ams̄inu, ebdit̄a, χoqi”,— χuli, χowt̄i”,— et̄ātʼura,—
+.		punctuation	489	čʼem. doχoli. koli. adamčaj. misginnu. jar. abas. wirk̄us. boʟoli. dos̄̌ob.
+—		punctuation	443	"ha,— "ašba,— jar,— i”,— talaħ”,— weӀqi",— "bara,— “ʟʼinčʼartʼura?”— abu,— ž˳en",—
+Ӏʼ	ʼˤ	replace	53	qӀʼ˳ebos qӀʼ˳eru qӀʼat̄an qӀʼ˳etʼu aӀʼ iq̄Ӏʼ+ boqӀʼoli qӀʼ˳ebu biqӀʼ˳ši qӀʼabaqӀʼurčen
+sː̌	ʃː	replace	37	baˤsː̌an sː̌umaj sː̌urˤ rasː̌ot sː̌ʷi kaˤrsː̌uwu dosː̌obtʃeqˤiʃ esː̌i tʃʼisː̌i dosː̌ob
+s̄̌	ʃː	replace	39	us̄̌aw s̄̌˳i dos̄̌ob, s̄̌e,— s̄̌aӀbit̄u dos̄̌občeqӀiš, s̄̌ubus “es̄̌i es̄̌i baӀs̄̌an
+š	ʃ	replace	385	bončʼiš hoc̄ʼaɬ̄aš bomčʼiš, uwqiši bekerši, jasqimit̄iš tʼanʁši gerk̄erši, ʁanaš dogilit̄iš
+Ӏ	ˤ	replace	347	wiq̄Ӏʼašiwu guržit̄eqӀaši eӀmmus obqӀali qʼeӀbdili. hēӀtʼu, aӀri haӀtər+ qӀali. beqӀit̄ib.
+"		punctuation	184	"bara "daki i",— ba",— et̄i?" as?" "dogi "waʕalijkum "ʟʼirt̄ur "dogilin
+˳	ʷ	replace	158	ɬ̄˳at̄u kʼ˳is qʼ˳ikdu. k˳iri?”— ž˳en?” kʼ˳at̄u biqʼ˳ma, ʟʼ˳a,— ɬ̄˳ačaj ʟʼ˳as̄an
+čʼ	t͡ʃʼ	replace	101	χomčʼiš",— čʼaben". mačʼat̄ub čʼaχ̄ut+ kʼočʼuwu. čʼemna ʟʼinčʼas̄ čʼemna, botʼomčʼiš, čʼem
+č	t͡ʃ	replace	96	dos̄̌občeqӀiš, tuχtʼurtilčaj: arčuqi",— čʼemlit̄iš bača”— čʼem. loburčeɬ̄u ɬ̄˳ačes, ʟʼinčʼas̄ čʼut̄eli
+ā	aː	replace	86	ɬ̄annārši",— et̄ātʼura,— lahārši. s̄alānu bāӀburši χarāši adāmu lāχaši “wā+ uwt̄ātʼura,—
+“		punctuation	81	“wa “jarχullut “wit “wā+ “wača”,— “ž˳en,— “jā,— “untʼaw,— “nacʼa “daki,—
+”		punctuation	80	eχ̄uli”,— basa”,— “kummus,”— was?”— uqi?”— boqi”,— et̄i?”— talaħ”,— χinaj”. qʼeӀjdiqi”,—
+:		punctuation	75	edili: juwmurši: guržili: ɬ̄annānu: χalqʼlirši: jamurmi: iwdili: ansaw: sintʼaw: s̄ala:
++		punctuation	72	“ʕali+ ʟʼinčʼas̄+ tʼibis̄+ laqʼ˳+ χ̄Ӏon+ cʼiχ̄+ bimma+ dimm+ lah+ χat̄aqʼmi+
+ž	ʒ	replace	72	guržili žunabu gurži, guržit̄eqӀiši ʁanžart̄ij, ʁanžart̄aj, guržili: “ž˳en,— ž˳en",— guržilis
+?	ˤ	replace	63	ž˳aɬ̄u?" kartʼilis?— et̄ili? χart̄ira?”— obqӀa?”— bošor?— ar? imc̄ʼu?” daširi?”— k˳iri?”—
+ō	oː	replace	54	χōmu dōӀz,— waq̄ʼōtʼu cʼōru, hōnu bošōru ōqu, χōsu dōӀzu bošōru.
+ē	eː	replace	21	oqӀalērši". tēnši "bēχut̄ut čʼēӀpu, hēӀtʼu, čʼēӀpu os̄ēnnur kʼ˳alērši weӀqērši, ɬ̄as̄ēni
+–		punctuation	11	došdur?– – adami?– ert̄ātʼura?"– dekera?"– tʼora?– nen?"– ʕalijkum".– uwʟis?"– hani?–
+ī	iː	replace	11	īkʼen wīcʼabu tʼīnna inχ̄īnu imc̄ʼīnu dīqʼu īmak
+ū	uː	replace	8	χūtʼu",— qʼut̄ūlu ūnu,— mūši, kummūlu ūwtʼu,— mūwli ūnu
+-		punctuation	3	dan-i?— k˳-a,— nacʼ-a
+)		punctuation	3	erdi),— wi), sini),
+(		punctuation	3	(os (han
+!		punctuation	2	uqi!— “o!—
+I	ˤ	replace	1	goӀroI+
+'	ʼ	replace	0	
+aʼˤ	aˤʔ	replace	0	
+kˤ	k	replace	0	
+nˤ	n	replace	0	
+rˤ	r	replace	0	
+sˤ	s	replace	0	
+wˤ	w	replace	0
+c	t͡s	replace	0

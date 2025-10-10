@@ -85,4 +85,6 @@ def update_model_for_custom_tokenizer(model_name, new_processor_path):
 if __name__ == "__main__":
     update_model_for_custom_tokenizer("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1") 
     update_model_for_custom_tokenizer("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split2")
+    update_model_for_custom_tokenizer("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split")
+
 

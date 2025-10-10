@@ -11,7 +11,7 @@ src	dst	type	count	sample_wordforms
 ?		glossing	83	ti\?g halgɨrɨma? haʔasdɨ? telʲman? a? lav\?g\i-r geRira\?g ješikbɨr? ʁubaʁmar? mi?
 /		punctuation	76	salamat// ix// tan// r//... min// mi// ijulʲ// prat// // pol//
 ž	ʒ	replace	45	služit žizni režɨm wazmožnost' možet žeskiy bagažnika uvažat dolgažiteljnica prodolžat'
-1		cyrillic	44	к1ыды г1/гьымыъ саргьа1тбыр йирк1ыр г1ыкысе к1иркьыр г1акуйне сиг1ыд χ1ibɨd саджиг1ил
+1		replace	44	к1ыды г1/гьымыъ саргьа1тбыр йирк1ыр г1ыкысе к1иркьыр г1акуйне сиг1ыд χ1ibɨd саджиг1ил
 [		punctuation	41	[...] [značit], [...]. [нрзб] [χana...] [mid]. [tu...] [tinʲa [ǯi...] im[R]
 ]		punctuation	40	[ǯudɨ] [fsʲo] [mid]. [ǯi...] [značit], [] [ili] А] а] это]
 )		punctuation	31	(tʼa...) (xa?) h)aʁowus )арака, (Лера:) (xur) ...(?) (са) (йид) waχt)
@@ -52,3 +52,5 @@ L	l	replace	1	Litxujne
 \		punctuation	0	
 '	ʼ	replace	0	
 -		punctuation	267	кьу- xeR\i-lera где-то хыных- Rargʷar\i-ma hemiRiRad\i-jex\i-r q\i-w\i-lc'ara X\i-l haz\i-rd\i- qiq'as\i-
+c	t͡s	replace	0
+аː	а   replace	1	Лераː

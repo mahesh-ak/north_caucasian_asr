@@ -23,7 +23,7 @@ This file should have columns `src`, `dst` and `type`
 
 > Sample command for tokenized data creation
 
- `python src/pre_process.py --data-dir processed_data/Rutul --processor ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --new-tokenizer custom`
+ `python src/pre_process.py --data-dir processed_data/Rutul --processor ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --new-tokenizer custom --split-file processed_data/Rutul/split1.json`
 
 > Sample command for training and evaluating with multiple GPUs
 

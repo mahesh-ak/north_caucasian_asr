@@ -31,8 +31,12 @@ def space_separate(sent):
                 continue
             elif sent[i+1] in ['͡']:
                 if i < len(sent) - 3 and sent[i+3] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                    phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3])
-                    i += 4
+                    if i < len(sent) - 4 and sent[i+4] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
+                        phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3]+sent[i+4])
+                        i += 5
+                    else:
+                        phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3])
+                        i += 4
                 else:
                     phonemes.append(sent[i]+sent[i+1]+sent[i+2])
                     i += 3
