@@ -355,6 +355,8 @@ def main():
         
         char_map_df = pd.read_csv(char_map_path, sep="\t")
         char_map_df.dropna(subset=['count'], inplace=True)
+        # replace na with ''
+        char_map_df.fillna('', inplace=True)
         corr_map = CorrMap()
         char_map_df.apply(corr_map.create_map, axis=1)
     else:
