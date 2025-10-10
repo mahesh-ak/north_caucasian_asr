@@ -1,5 +1,7 @@
 lang,model_name,split_name,wer,cer,per
-Rutul,custom,split1,1.0,0.41248817407757804,0.41189383356615444
-Rutul,custom,split2,1.0,0.4859035004730369,0.48789273564138486
-Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split1,0.9975186104218362,0.4109744560075686,0.40599132834055973
-Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split2,1.0,0.4503311258278146,0.4487862640615749
+Archi,custom,split_zs,1.0,0.545,0.559
+Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split_zs,1.0,0.593,0.607
+Rutul,custom,split1_zs,1.0,0.563,0.571
+Rutul,custom,split2_zs,1.0,0.563,0.571
+Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split1_zs,1.0,0.656,0.66
+Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split2_zs,1.0,0.656,0.66

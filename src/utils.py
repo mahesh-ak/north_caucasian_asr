@@ -209,14 +209,14 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
 
     # reduce font size of ticks if too many labels
     if len(labels) > 120:
+        plt.xticks(fontsize=2)
+        plt.yticks(fontsize=2)
+    elif len(labels) > 80:
         plt.xticks(fontsize=4)
         plt.yticks(fontsize=4)
-    elif len(labels) > 80:
+    elif len(labels) > 40:
         plt.xticks(fontsize=6)
         plt.yticks(fontsize=6)
-    elif len(labels) > 40:
-        plt.xticks(fontsize=8)
-        plt.yticks(fontsize=8)
     
     
     plt.colorbar(im, ax=ax, label="Proportion")

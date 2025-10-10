@@ -94,6 +94,8 @@ def main():
     # include id in model forward pass to be able to access it in compute_metrics
     orig_forward = model.forward
     model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
+
+    #model.freeze_feature_encoder = True
     
     ## output_dir is model_name if model_name is a path, else create a directory in results_dir
     if Path(model_name).exists():

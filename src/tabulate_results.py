@@ -33,9 +33,9 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         "lang": lang,
                                         "model_name": model_name,
                                         "split_name": split_name,
-                                        "wer": wer,
-                                        "cer": cer,
-                                        "per": per
+                                        "wer": round(wer, 3),
+                                        "cer": round(cer,3),
+                                        "per": round(per,3)
                                     })
                             else:
                                 print(f"Warning: {stats_file} does not exist.")
