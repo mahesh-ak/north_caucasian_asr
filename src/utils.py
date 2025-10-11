@@ -270,7 +270,7 @@ def compute_metrics(pred, processor, tokenized_dataset, save_results=False, resu
     
         # plot confusion matrix, with labels sorted by unicode value, <eps> at first
         plot_confusion_matrix(char_stats["confusion_matrix"], char_stats["confusion_labels"], 
-                              title="Normalized Phoneme Confusion Matrix", 
+                              title=f"Normalized Phoneme Confusion Matrix - {results_folder.replace('results/','').replace('/','_')}", 
                               savepath=os.path.join(results_folder, "confusion_matrix.png"))
         
         stats_dict = {
