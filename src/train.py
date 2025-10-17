@@ -141,8 +141,9 @@ def main():
 
     trainer.train()
     ## save model and processor to model_dir
-    trainer.save_model(output_dir)
-    processor.save_pretrained(output_dir)
+    if num_epochs > 0:
+        trainer.save_model(output_dir)
+        processor.save_pretrained(output_dir)
     
     print("Evaluating on test set")
     trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], save_results=True, results_folder=results_dir)
