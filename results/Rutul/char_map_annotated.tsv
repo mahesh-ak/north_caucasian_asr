@@ -26,7 +26,7 @@ A	a	replace	15	Abdulla Awalajdɨ Awalaj Awalais Abdullara Allaχ, Abdullas Allah
 G	ɢ	replace	14	G\i-r\i-c' Gačaxwald\i- Gaq' gʲaGa GačaX Guruwuruurij Gačax gʲaraG GačaXad Garijera
 M	m	replace	11	Mirzaχaɨs, Magaldɨ Maˁhaˁmaˁd Mirzaχan Miχri ɢM
 |	ˤ	replace	9	mu|q'a... ma|Rʷ, a|ǯizd\i- q'a|rd\i- r\i-|x\i-ra muq|ud u|rxud, mu|q'a mu|qa
-ä	a	replace	9	läna lä sä irajχän,
+ä	æ	replace	9	läna lä sä irajχän,
 N	n	replace	8	Nowgorodde Nik'alaj Nikolajdɨ Nikolaj Nizir-baba, Nikalaj
 !		punctuation	8	xɨdɨlnowa! большое! χačʼirχɨra! wɨlcʼara! guzel! suwqʼura! xur!
 I	i	replace	5	Ibram Idɨlʲ-adxa, I
@@ -52,13 +52,5 @@ L	l	replace	1	Litxujne
 \		punctuation	0	
 '	ʼ	replace	0	
 -		punctuation	267	кьу- xeR\i-lera где-то хыных- Rargʷar\i-ma hemiRiRad\i-jex\i-r q\i-w\i-lc'ara X\i-l haz\i-rd\i- qiq'as\i-
-c	t͡s	replace	0	
-аː	а	replace	1	
-jː	j	replace	1	
-lʼ	lʲ	replace	1	
-qʲ	q	replace	1	
-qʼʲ	kʲ	replace	1	
-qwʼ	qʼʷ	replace	1	
-ʃʲ	ʃʲː	replace	1	
-ʃː	ʃ	replace	1	
-qˤu	quˤ	replace	1	
+c	t͡s	replace	0
+аː	а   replace	1	Лераː

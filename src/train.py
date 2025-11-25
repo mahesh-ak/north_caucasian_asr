@@ -2,7 +2,16 @@ import argparse
 from pathlib import Path
 from utils import *
 from datasets import load_from_disk
-from transformers import AutoModelForCTC, TrainingArguments, Trainer, AutoProcessor
+from transformers import (
+    AutoModelForCTC,
+    WhisperForConditionalGeneration,
+    TrainingArguments,
+    Seq2SeqTrainingArguments,
+    Trainer,
+    Seq2SeqTrainer,
+    AutoProcessor,
+)
+from transformers.models.whisper import WhisperProcessor
 import torch
 import inspect
 
@@ -18,6 +27,7 @@ def parse_args():
         required=True,
         help="Pretrained model name or path from Hugging Face or local directory. Processor should also be present in the same directory. Checkpoints will be saved in this directory.",
     )
+    
     parser.add_argument(
         "--data-dir",
         type=str,
@@ -62,11 +72,38 @@ def patched_prediction_step(self, model, inputs, prediction_loss_only, ignore_ke
 
     return loss, logits, labels
 
+
+_original_seq2seq_prediction_step = Seq2SeqTrainer.prediction_step
+
+def patched_seq2seq_prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+    # Save ids before passing to model
+    ids = inputs.get("id")
+    labels = inputs.get("labels")
+    # Remove ids from inputs so model.generate doesn't complain
+    inputs = {k: v for k, v in inputs.items() if k not in ("id","labels")}
+
+    # Standard Seq2SeqTrainer prediction step
+    loss, generated_tokens, _ = _original_seq2seq_prediction_step(
+        self, model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+
+    # Wrap predictions in dict to include IDs
+    if generated_tokens is not None:
+        if isinstance(generated_tokens, dict):
+            generated_tokens["id"] = ids
+            generated_tokens["labels"] = labels
+        else:
+            generated_tokens = {"generated_tokens": generated_tokens, "id": ids, "labels": labels}
+
+    return loss, generated_tokens, labels
+
 def main():
     args = parse_args()
     model_name = args.model_dir
     data_dir = Path(args.data_dir)
-    
+
+    model_type = "ctc"
+    if 'whisper' in model_name.lower():
+        model_type = "whisper"
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
     results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
@@ -85,11 +122,28 @@ def main():
     ## created input_dataset with only features "input_values", "labels" and "id" for memory efficiency
     input_dataset = {}
     for split in ['train','validation','test']:
-        input_dataset[split] = tokenized_dataset[split].remove_columns([col for col in tokenized_dataset[split].column_names if col not in ['input_values','labels','id']])
+        if model_type == "ctc":
+            keep_cols = ['input_values', 'labels', 'id']
+        else:  # whisper
+            keep_cols = ['input_features', 'labels', 'id']
+
+        cols_to_remove = [col for col in tokenized_dataset[split].column_names if col not in keep_cols]
+        input_dataset[split] = tokenized_dataset[split].remove_columns(cols_to_remove)
     
-    print(f"Loading model and processor from {model_name}")
-    model = AutoModelForCTC.from_pretrained(model_name)
+    print(f"Loading processor from {model_name}")
     processor = AutoProcessor.from_pretrained(model_name)
+
+    print(f"Loading model ({model_type}) from {model_name}")
+    if model_type == "ctc":
+        model = AutoModelForCTC.from_pretrained(model_name)
+    else:
+        # Whisper encoder-decoder
+        model = WhisperForConditionalGeneration.from_pretrained(model_name)
+        # ensure special tokens are set
+        if hasattr(processor, "tokenizer"):
+            model.config.decoder_start_token_id = processor.tokenizer.bos_token_id
+            model.config.eos_token_id = processor.tokenizer.eos_token_id
+            model.config.pad_token_id = processor.tokenizer.pad_token_id
 
     # include id in model forward pass to be able to access it in compute_metrics
     orig_forward = model.forward
@@ -107,37 +161,73 @@ def main():
         model.config.eos_token_id = processor.tokenizer.eos_token_id
         model.config.pad_token_id = processor.tokenizer.pad_token_id
         
-    # define training args
-    training_args = TrainingArguments(
-        output_dir=output_dir,
-        group_by_length=True,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        gradient_accumulation_steps=16//batch_size, # to simulate batch size of 16
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        num_train_epochs=num_epochs,
-        fp16=torch.cuda.is_available(),
-        learning_rate=3e-4,
-        save_total_limit=1,
-        push_to_hub=False,
-        remove_unused_columns=False,
-    )
-
     # define data collator
-    data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+    if model_type == "ctc":
+        data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+    else:
+        data_collator = DataCollatorWhisperWithPadding(processor=processor, padding=True)
+
+
+    # define training args
+    if model_type == "ctc":
+        training_args = TrainingArguments(
+            output_dir=output_dir,
+            group_by_length=True,
+            per_device_train_batch_size=batch_size,
+            per_device_eval_batch_size=batch_size,
+            gradient_accumulation_steps=16//batch_size,
+            eval_strategy="epoch",
+            save_strategy="epoch",
+            num_train_epochs=num_epochs,
+            fp16=torch.cuda.is_available(),
+            learning_rate=3e-4,
+            save_total_limit=1,
+            push_to_hub=False,
+            remove_unused_columns=False,
+        )
+    else:
+        # Whisper uses seq2seq generation
+        training_args = Seq2SeqTrainingArguments(
+            output_dir=output_dir,
+            per_device_train_batch_size=batch_size,
+            per_device_eval_batch_size=batch_size,
+            gradient_accumulation_steps=16//batch_size,
+            eval_strategy="epoch",
+            save_strategy="epoch",
+            num_train_epochs=num_epochs,
+            fp16=torch.cuda.is_available(),
+            learning_rate=3e-4,
+            predict_with_generate=True,
+            generation_max_length=256,
+            save_total_limit=1,
+            push_to_hub=False,
+            remove_unused_columns=False,
+        )
 
     Trainer.prediction_step = patched_prediction_step
+    Seq2SeqTrainer.prediction_step = patched_seq2seq_prediction_step
     # define trainer
-    trainer = Trainer(
-        model=model,
-        data_collator=data_collator,
-        args=training_args,
-        compute_metrics= lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation']),
-        train_dataset=input_dataset["train"],
-        eval_dataset=input_dataset["validation"],
-        processing_class=processor,
-    )
+    if model_type == "ctc":
+        trainer = Trainer(
+            model=model,
+            data_collator=data_collator,
+            args=training_args,
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
+            train_dataset=input_dataset["train"],
+            eval_dataset=input_dataset["validation"],
+            processing_class=processor,
+        )
+    else:
+        # Whisper: model returns seq2seq predictions
+        trainer = Seq2SeqTrainer(
+            model=model,
+            data_collator=data_collator,
+            args=training_args,
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
+            train_dataset=input_dataset["train"],
+            eval_dataset=input_dataset["validation"],
+            tokenizer=processor.tokenizer,
+        ) 
 
     trainer.train()
     ## save model and processor to model_dir
@@ -146,7 +236,7 @@ def main():
         processor.save_pretrained(output_dir)
     
     print("Evaluating on test set")
-    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], save_results=True, results_folder=results_dir)
+    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir))
     trainer.eval_dataset = input_dataset["test"]
     test_metrics = trainer.evaluate()
     print(f"Test set metrics: {test_metrics}")

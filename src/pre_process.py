@@ -5,12 +5,13 @@ import sys
 import pandas as pd
 import json
 from sklearn.model_selection import train_test_split
-from transformers import Wav2Vec2CTCTokenizer, AutoProcessor
+from transformers import Wav2Vec2CTCTokenizer, AutoProcessor, WhisperTokenizerFast, WhisperFeatureExtractor, WhisperProcessor
 import librosa
-from datasets import Dataset
+from datasets import Dataset, Features, Array2D, Sequence, Value
+import numpy as np
 
 # Function to process data
-def prepare_dataset(batch, processor, word_delimiter_token):
+def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2"):
     # Load and resample audio data
     audio = batch["audio_path"]
     # Check if audio_path exists and is a file
@@ -21,24 +22,46 @@ def prepare_dataset(batch, processor, word_delimiter_token):
     audio_array, _ = librosa.load(audio)
     
     # Process audio, data created by data.py is already at 16kHz
-    batch["input_values"] = processor(
-        audio_array, 
-        sampling_rate=16000, 
-        return_tensors="pt"
-    ).input_values[0]
+    if mode == "wav2vec2":
+        batch["input_values"] = processor(
+            audio_array, 
+            sampling_rate=16000, 
+            return_tensors="pt"
+        ).input_values[0]
+    elif mode == "whisper":
+        batch["input_features"] = processor(
+            audio_array, 
+            sampling_rate=16000, 
+            return_tensors="pt"
+        ).input_features[0]
     
-    # Process transcript for IPA, first condense multiple spaces to single space
-    batch["transcript"] = ' '.join(batch["transcript"].strip().split())
-    batch["labels"] = batch["transcript"].replace(' ', word_delimiter_token)
-    with processor.as_target_processor():
-        batch["labels"] = processor(batch["labels"]).input_ids
-    
+    # clean + tokenize text
+    batch["transcript"] = " ".join(batch["transcript"].strip().split())
+    text = batch["transcript"].replace(" ", word_delimiter_token)
+
+    if mode == "wav2vec2":
+        with processor.as_target_processor():
+            batch["labels"] = processor(text).input_ids
+    elif mode == "whisper":
+        # Whisper special tokens
+        start_token = processor.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
+        lang_token  = processor.tokenizer.convert_tokens_to_ids("<|ru|>")      # closest language
+        task_token  = processor.tokenizer.convert_tokens_to_ids("<|transcribe|>")
+        no_ts_token = processor.tokenizer.convert_tokens_to_ids("<|notimestamps|>")
+
+        tokens = processor.tokenizer(
+            text,
+            add_special_tokens=False
+        ).input_ids
+
+        # prepend special whisper tokens
+        batch["labels"] = [start_token, lang_token, task_token, no_ts_token] + tokens
+
     return batch
 
-def tokenize_transcripts(data_dir, processor, output_dir, split_file, word_delimiter_token="|"):
+def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word_delimiter_token="|"):
     data_dir = Path(data_dir)
     output_dir = Path(output_dir)
-
     # A directory is usually structured with subfolders each containing a dataset.csv
     # Subfolder allocated to train, test should be present in data_dir / split.json with structure {'train': ['subfolder1', 'subfolder2'], 'test': ['subfolder3']}
     split_file = Path(split_file)
@@ -74,18 +97,20 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, word_delim
         if split == 'train':
             # Shuffle and take 95% for train, 5% for validation
             train_df, val_df = train_test_split(all_transcripts_df, test_size=0.05, random_state=42)
-            train_dataset = Dataset.from_pandas(train_df)
-            val_dataset = Dataset.from_pandas(val_df)
+            train_dataset = Dataset.from_pandas(train_df, preserve_index=False)
+            val_dataset = Dataset.from_pandas(val_df, preserve_index=False)
             # Process datasets
             datasets = [("train", train_dataset), ("validation", val_dataset)]
         else:
-            test_dataset = Dataset.from_pandas(all_transcripts_df)
+            test_dataset = Dataset.from_pandas(all_transcripts_df, preserve_index=False)
             datasets = [(split, test_dataset)]
         
 
         for ds_name, dataset in datasets:
             # Map the dataset with the processor, retain these columns: textgrid_path, tier_name, interval_id for traceability or remove audio_path and transcript
-            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
+   
+            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token, mode=mode), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
+
             # Save the processed dataset to output_dir / ds_name
             dataset.save_to_disk(output_dir / ds_name)
             print(f"Saved {ds_name} dataset with {len(dataset)} samples to {output_dir / ds_name}")
@@ -143,31 +168,86 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     processor = AutoProcessor.from_pretrained(args.processor)
+    mode = ""
+    is_whisper = 'whisper' in processor.__class__.__name__.lower()
+    mode = "whisper" if is_whisper else mode
+    if is_whisper:
+        word_delimiter_token = " "
+    else:
+        word_delimiter_token = args.word_delimiter_token
+
+    is_wav2vec2 = 'wav2vec2' in processor.__class__.__name__.lower()
+    mode = "wav2vec2" if is_wav2vec2 else mode
+    if not mode:
+        print("Unsupported processor type. Only Whisper and Wav2Vec2 are supported.")
+        sys.exit(1)
     # Load the tokenizer
     if args.new_tokenizer:
         print("Creating a new tokenizer based on vocab.json in data_dir")
-        ## create a tokenizer based on vocab.json in data_dir
         vocab_file = data_dir / "vocab.json"
         if not vocab_file.exists():
             print(f"Vocab file {vocab_file} does not exist. Exiting.")
             sys.exit(1)
-        ## As of now only Wav2Vec2CTCTokenizer is supported
-        tokenizer = Wav2Vec2CTCTokenizer(vocab_file=vocab_file, 
-                                        word_delimiter_token=args.word_delimiter_token, 
-                                        unk_token="<unk>",
-                                        pad_token="<pad>",
-                                        bos_token="<s>",
-                                        eos_token="</s>",
-                                        model_max_length=1024)        
 
-        processor.tokenizer = tokenizer
-        ## save processor to models / data_dir.parts[1:] / args.new_tokenizer / split_name
-        save_dir = Path("models") / Path(*data_dir.parts[1:]) / args.new_tokenizer / Path(args.split_file).stem
+        # -------------------------------
+        # Detect if processor is Whisper
+        # -------------------------------
+        
+
+        if is_whisper:
+            # -------------------------------
+            # Build Whisper tokenizer
+            # -------------------------------
+            with open(vocab_file, "r", encoding="utf-8") as f:
+                vocab = json.load(f)
+
+            tokenizer = WhisperTokenizerFast(
+                vocab=vocab,
+                bos_token="<s>",
+                eos_token="</s>",
+                unk_token="<unk>",
+                pad_token="<pad>",
+            )
+
+            tokenizer.set_prefix_tokens([])
+            # Whisper needs its feature extractor
+            feature_extractor = WhisperFeatureExtractor.from_pretrained(args.processor)
+
+            processor = WhisperProcessor(
+                feature_extractor=feature_extractor,
+                tokenizer=tokenizer,
+            )
+
+        else:
+            # -------------------------------
+            # Existing Wav2Vec2 tokenizer
+            # -------------------------------
+            mode = "wav2vec2"
+            tokenizer = Wav2Vec2CTCTokenizer(
+                vocab_file=vocab_file,
+                word_delimiter_token=args.word_delimiter_token,
+                unk_token="<unk>",
+                pad_token="<pad>",
+                bos_token="<s>",
+                eos_token="</s>",
+                model_max_length=1024,
+            )
+            processor.tokenizer = tokenizer
+
+        # -------------------------------
+        # Save processor
+        # -------------------------------
+        save_dir = (
+            Path("models")
+            / Path(*data_dir.parts[1:])
+            / args.new_tokenizer
+            / Path(args.split_file).stem
+        )
         save_dir.mkdir(parents=True, exist_ok=True)
+
         processor.save_pretrained(save_dir)
         print(f"Saved new processor to {save_dir}")
-        
-        ## output_dir should contain a subfolder with name args.new_tokenizer
+
         output_dir = output_dir / args.new_tokenizer
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
@@ -177,7 +257,7 @@ def main():
         output_dir.mkdir(parents=True, exist_ok=True)
         
     print(f"Using tokenizer with vocab size: {processor.tokenizer.vocab_size}")
-    tokenize_transcripts(data_dir, processor, output_dir, args.split_file, args.word_delimiter_token)
+    tokenize_transcripts(data_dir, processor, output_dir, args.split_file, mode, word_delimiter_token)
     
 if __name__ == "__main__":
     main()

@@ -20,7 +20,7 @@ s̄̌	ʃː	replace	39	us̄̌aw s̄̌˳i dos̄̌ob, s̄̌e,— s̄̌aӀbit̄u dos
 :		punctuation	75	edili: juwmurši: guržili: ɬ̄annānu: χalqʼlirši: jamurmi: iwdili: ansaw: sintʼaw: s̄ala:
 +		punctuation	72	“ʕali+ ʟʼinčʼas̄+ tʼibis̄+ laqʼ˳+ χ̄Ӏon+ cʼiχ̄+ bimma+ dimm+ lah+ χat̄aqʼmi+
 ž	ʒ	replace	72	guržili žunabu gurži, guržit̄eqӀiši ʁanžart̄ij, ʁanžart̄aj, guržili: “ž˳en,— ž˳en",— guržilis
-?		punctuation	63	ž˳aɬ̄u?" kartʼilis?— et̄ili? χart̄ira?”— obqӀa?”— bošor?— ar? imc̄ʼu?” daširi?”— k˳iri?”—
+?	ˤ	replace	63	ž˳aɬ̄u?" kartʼilis?— et̄ili? χart̄ira?”— obqӀa?”— bošor?— ar? imc̄ʼu?” daširi?”— k˳iri?”—
 ō	oː	replace	54	χōmu dōӀz,— waq̄ʼōtʼu cʼōru, hōnu bošōru ōqu, χōsu dōӀzu bošōru.
 ē	eː	replace	21	oqӀalērši". tēnši "bēχut̄ut čʼēӀpu, hēӀtʼu, čʼēӀpu os̄ēnnur kʼ˳alērši weӀqērši, ɬ̄as̄ēni
 –		punctuation	11	došdur?– – adami?– ert̄ātʼura?"– dekera?"– tʼora?– nen?"– ʕalijkum".– uwʟis?"– hani?–
@@ -33,4 +33,9 @@ s̄̌	ʃː	replace	39	us̄̌aw s̄̌˳i dos̄̌ob, s̄̌e,— s̄̌aӀbit̄u dos
 I	ˤ	replace	1	goӀroI+
 '	ʼ	replace	0	
 aʼˤ	aˤʔ	replace	0	
+kˤ	k	replace	0	
+nˤ	n	replace	0	
+rˤ	r	replace	0	
+sˤ	s	replace	0	
+wˤ	w	replace	0
 c	t͡s	replace	0

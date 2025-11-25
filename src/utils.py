@@ -1,6 +1,6 @@
 import torch
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from transformers import Wav2Vec2Processor
 from collections import defaultdict
 import evaluate
@@ -86,6 +86,54 @@ class DataCollatorCTCWithPadding:
         return batch
 
 
+@dataclass
+class DataCollatorWhisperWithPadding:
+    processor: Any        # WhisperProcessor
+    padding: Union[bool, str] = True
+
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
+        # ------------------------------
+        # 1. Split input_values + labels
+        # ------------------------------
+        input_features = [{"input_features": f["input_features"]} for f in features]
+        label_features = [{"input_ids": f["labels"]} for f in features]
+
+        # Preserve ID field if present
+        id_present = "id" in features[0]
+        if id_present:
+            id_list = [f["id"] for f in features]
+
+        # ---------------------------------------
+        # 2. Pad encoder inputs (audio features)
+        # ---------------------------------------
+        batch = self.processor.feature_extractor.pad(
+            input_features,
+            return_tensors="pt",
+            padding=self.padding,
+        )
+
+        # ------------------------------------------------
+        # 3. Pad decoder input_ids (text labels)
+        #    Important: Whisper MUST KEEP pad_token_id,
+        #    not replace with -100 like CTC.
+        # ------------------------------------------------
+        labels_batch = self.processor.tokenizer.pad(
+            label_features,
+            return_tensors="pt",
+            padding=self.padding,
+        )
+
+        # HF Whisper expects raw padded labels
+        labels = labels_batch["input_ids"]
+
+        # Add id field
+        if id_present:
+            batch["id"] = torch.tensor(id_list, dtype=torch.long)
+
+        batch["labels"] = labels
+
+        return batch
+    
 # Define metrics for evaluation
 wer_metric = evaluate.load("wer")
 cer_metric = evaluate.load("cer")
@@ -242,11 +290,17 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     plt.show()
 
 
-def compute_metrics(pred, processor, tokenized_dataset, save_results=False, results_folder="results/default"):
-    pred_logits = pred.predictions["logits"]
-    pred_ids    = np.argmax(pred_logits, axis=-1)
+def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default"):
+    if model_type == "whisper":
+        # pred_logits is a list/array of variable-length token sequences
+        # Whisper outputs token sequences (possibly ragged)
+        pred_ids = pred.predictions["generated_tokens"]
 
-    # decode pred_ids to strings and skip special tokens
+    else:
+        # CTC branch
+        pred_logits = pred.predictions["logits"]
+        pred_ids = np.argmax(pred_logits, axis=-1)
+
     pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
     pred_str = [s.replace('#', ' ') for s in pred_str]
 
