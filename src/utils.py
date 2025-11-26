@@ -13,38 +13,51 @@ import json
 def space_separate(sent):
     # Separate phonemes in a given sentence
     phonemes = []
+    modifiers = ['ʲ', 'ʷ', 'ʼ', 'ː', 'ˤ', "'"]
+    tie_bar = ['͡']
 
     i = 0
-    while i < len(sent):
-        if i < len(sent)-1:
-            if sent[i+1] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                if i < len(sent) - 2 and sent[i+2] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                    if i < len(sent) - 3 and sent[i+3] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                        phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3])
-                        i += 4
-                    else:
-                        phonemes.append(sent[i]+sent[i+1]+sent[i+2])
-                        i += 3
+    L = len(sent)
+
+    while i < L:
+        # First-level lookahead
+        if i + 1 < L and sent[i+1] in modifiers:
+            # second-level lookahead
+            if i + 2 < L and sent[i+2] in modifiers:
+                # third-level lookahead
+                if i + 3 < L and sent[i+3] in modifiers:
+                    phonemes.append(sent[i:i+4])
+                    i += 4
                 else:
-                    phonemes.append(sent[i]+sent[i+1])
-                    i += 2
-                continue
-            elif sent[i+1] in ['͡']:
-                if i < len(sent) - 3 and sent[i+3] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                    if i < len(sent) - 4 and sent[i+4] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-                        phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3]+sent[i+4])
-                        i += 5
-                    else:
-                        phonemes.append(sent[i]+sent[i+1]+sent[i+2]+sent[i+3])
-                        i += 4
-                else:
-                    phonemes.append(sent[i]+sent[i+1]+sent[i+2])
+                    phonemes.append(sent[i:i+3])
                     i += 3
-                continue
+            else:
+                phonemes.append(sent[i:i+2])
+                i += 2
+            continue
+
+        # Tie-bar handling
+        if i + 1 < L and sent[i+1] in tie_bar:
+            if i + 3 < L and sent[i+3] in modifiers:
+                if i + 4 < L and sent[i+4] in modifiers:
+                    phonemes.append(sent[i:i+5])
+                    i += 5
+                else:
+                    phonemes.append(sent[i:i+4])
+                    i += 4
+            elif i + 2 < L:
+                phonemes.append(sent[i:i+3])
+                i += 3
+            else:
+                # unexpected end, just take remaining characters
+                phonemes.append(sent[i:])
+                break
+            continue
+
+        # Default: single character
         phonemes.append(sent[i])
-        if sent[i] in ['ʲ', 'ʷ', 'ʼ', 'ː','ˤ', "'"]:
-            print('\t',sent)
         i += 1
+
     return phonemes
 
 ## Data collator that will dynamically pad the inputs received, as well as the labels.

@@ -49,8 +49,8 @@ def parse_args():
     parser.add_argument(
         "--num-epochs",
         type=int,
-        default=20,
-        help="Number of training epochs. (default: 20)",
+        default=30,
+        help="Number of training epochs. (default: 30, 10 for whisper models)",
     )
     
     return parser.parse_args()
@@ -102,16 +102,22 @@ def main():
     data_dir = Path(args.data_dir)
 
     model_type = "ctc"
+    lr = 3e-4
+    num_epochs = args.num_epochs
+
     if 'whisper' in model_name.lower():
         model_type = "whisper"
+        lr = 1e-5
+        num_epochs = min(num_epochs, 10)  # limit epochs for whisper fine-tuning
+        if 'large' in model_name.lower():
+            lr = 5e-6
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
     results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
     results_dir.mkdir(parents=True, exist_ok=True)
     
     batch_size = args.batch_size
-    num_epochs = args.num_epochs
-    
+        
     print(f"Loading dataset from {data_dir}")
     tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
 
@@ -180,7 +186,7 @@ def main():
             save_strategy="epoch",
             num_train_epochs=num_epochs,
             fp16=torch.cuda.is_available(),
-            learning_rate=3e-4,
+            learning_rate=lr,
             save_total_limit=1,
             push_to_hub=False,
             remove_unused_columns=False,
@@ -196,14 +202,15 @@ def main():
             save_strategy="epoch",
             num_train_epochs=num_epochs,
             fp16=torch.cuda.is_available(),
-            learning_rate=3e-4,
+            learning_rate=lr,
+            warmup_steps=100,
+            weight_decay=0.01,
             predict_with_generate=True,
-            generation_max_length=256,
+            generation_max_length=128,
+            generation_num_beams=1,  # beam search is expensive; keep 1 for training
             save_total_limit=1,
-            push_to_hub=False,
             remove_unused_columns=False,
         )
-
     Trainer.prediction_step = patched_prediction_step
     Seq2SeqTrainer.prediction_step = patched_seq2seq_prediction_step
     # define trainer
