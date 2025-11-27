@@ -14,6 +14,7 @@ from transformers import (
 from transformers.models.whisper import WhisperProcessor
 import torch
 import inspect
+import shutil
 
 
 def parse_args():
@@ -159,7 +160,7 @@ def main():
     
     ## output_dir is model_name if model_name is a path, else create a directory in results_dir
     if Path(model_name).exists():
-        output_dir = model_name
+        output_dir = Path(model_name)
     else:
         output_dir = Path('models') / Path(*data_dir.parts[1:])
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -208,6 +209,7 @@ def main():
             predict_with_generate=True,
             generation_max_length=128,
             generation_num_beams=1,  # beam search is expensive; keep 1 for training
+            fsdp="full_shard auto_wrap",
             save_total_limit=1,
             remove_unused_columns=False,
         )
@@ -241,6 +243,11 @@ def main():
     if num_epochs > 0:
         trainer.save_model(output_dir)
         processor.save_pretrained(output_dir)
+        ## clear checkpoints to save space
+        checkpoints = list(output_dir.glob("checkpoint-*"))
+        for ckpt in checkpoints:
+            if ckpt.is_dir():
+                shutil.rmtree(ckpt)
     
     print("Evaluating on test set")
     trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir))
