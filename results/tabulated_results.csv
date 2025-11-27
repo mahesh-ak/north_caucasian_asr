@@ -2,6 +2,7 @@ lang,model_name,split_name,wer,cer,per
 Archi,custom,split,0.514,0.124,0.131
 Archi,custom,split_noinit,0.851,0.282,0.283
 Archi,custom,zero_shot,1.0,0.544,0.558
+Archi,gpt-4o-transcribe,split,0.989,0.642,0.647
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split,0.564,0.14,0.147
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.593,0.606
 Archi,whisper-large-v3,split,0.408,0.099,0.107
@@ -11,6 +12,7 @@ Rutul,custom,split1_noinit,0.82,0.237,0.233
 Rutul,custom,split2,0.904,0.279,0.268
 Rutul,custom,split3,0.773,0.211,0.209
 Rutul,custom,zero_shot,1.0,0.563,0.571
+Rutul,gpt-4o-transcribe,split1,0.998,0.756,0.749
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split1,0.793,0.225,0.219
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split2,0.901,0.284,0.272
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split3,0.818,0.232,0.225

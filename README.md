@@ -29,6 +29,8 @@ This file should have columns `src`, `dst` and `type`
 
  `torchrun --nproc_per_node=2 src/train.py --model-dir models/Rutul/custom/ --data-dir tokenized_data/Rutul/custom/ --num-epochs 5 --batch-size 1`
 
+> Sample command to run gpt-4o-transcribe:
+ `python src/prompt_llm.py --data-dir processed_data/Archi --split-json processed_data/Archi/split.json --vocab processed_data/Archi/vocab.json`
 
 ## To do
 
