@@ -386,11 +386,25 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     plt.show()
 
 
-def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default"):
-    if model_type == "whisper":
+def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default", prompt=None):
+    if model_type != "ctc":
         # pred_logits is a list/array of variable-length token sequences
         # Whisper outputs token sequences (possibly ragged)
         pred_ids = pred.predictions["generated_tokens"]
+
+        # remove prompt tokens if prompt is provided
+        if prompt is not None:
+            # encode prompt to get length
+            if hasattr(processor, "tokenizer"):  # Qwen/Whisper
+                prompt_ids = processor.tokenizer(prompt).input_ids
+            elif hasattr(processor, "text_processor"):  # alternative processor naming
+                prompt_ids = processor.text_processor(prompt).input_ids
+            else:
+                prompt_ids = processor(prompt, return_tensors="pt").input_ids[0]
+            prompt_len = len(prompt_ids)
+            # strip prompt tokens
+            pred_ids = pred_ids[:, prompt_len:] if pred_ids.ndim > 1 else pred_ids[prompt_len:]
+
 
     else:
         # CTC branch
