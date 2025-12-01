@@ -146,7 +146,90 @@ class DataCollatorWhisperWithPadding:
         batch["labels"] = labels
 
         return batch
-    
+
+class DataCollatorQwenAudio:
+    """
+    Collator for Qwen2-Audio-Instruct and Qwen2.5-Omni (text-only),
+    using 'input_values' as raw audio array input.
+    """
+
+    def __init__(self, processor, prompt: str = "", padding: bool = True, is_omni: bool = False):
+        self.processor = processor
+        self.prompt = prompt
+        self.padding = padding
+        self.is_omni = is_omni  # False = Qwen2-Audio, True = Qwen2.5-Omni
+
+    def __call__(self, features: list) -> dict:
+        # pull raw waveform from preprocess
+        audios = [f["input_values"] for f in features]  # <---- HERE
+
+        # build chat template messages
+        conversations = []
+        for f in features:
+            prompt_text = f.get("prompt", self.prompt)
+            if self.is_omni:
+                conversations.append([
+                        {
+                            "role": "system",
+                            "content": [
+                                {"type": "text", "text":
+                                    "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."
+                                }
+                            ],
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "audio"},                # binds to processor(..., audio=audios)
+                                {"type": "text", "text": prompt_text},
+                            ],
+                        }
+                    ])
+            else:
+                conversations.append([
+                    {"role": "user", "content": [
+                        {"type": "audio"},     # audio will be bound by processor(audio=..)
+                        {"type": "text", "text": prompt_text},
+                    ]}
+                ])
+
+        texts = [
+            self.processor.apply_chat_template(conv, add_generation_prompt=True, tokenize=False)
+            for conv in conversations
+        ]
+
+        # Qwen2-Audio uses `audios=`, Omni uses `audio=`
+        if self.is_omni:
+            inputs = self.processor(
+                text=texts,
+                audio=audios,         # Qwen2.5-Omni
+                return_tensors="pt",
+                padding=self.padding
+            )
+        else:
+            inputs = self.processor(
+                text=texts,
+                audio=audios,        # Qwen2-Audio-Instruct
+                return_tensors="pt",
+                padding=self.padding
+            )
+
+        # process labels
+        label_inputs = [{"input_ids": f["labels"]} for f in features]
+        padded = self.processor.tokenizer.pad(
+            label_inputs, padding=self.padding, return_tensors="pt"
+        )
+        labels = padded["input_ids"]
+        labels = labels.masked_fill(padded.attention_mask.ne(1), -100)
+
+        batch = {**inputs, "labels": labels}
+
+        if "id" in features[0]:
+            batch["id"] = torch.tensor([f["id"] for f in features], dtype=torch.long)
+
+        return batch
+
+     
 # Define metrics for evaluation
 wer_metric = evaluate.load("wer")
 cer_metric = evaluate.load("cer")

@@ -10,8 +10,28 @@ import librosa
 from datasets import Dataset, Features, Array2D, Sequence, Value
 import numpy as np
 
+
+def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
+    keys = sorted(ipa2cyrl.keys(), key=len, reverse=True)  # longest first
+    i, n = 0, len(text)
+    out = []
+
+    while i < n:
+        matched = False
+        for k in keys:
+            if text.startswith(k, i):
+                out.append(ipa2cyrl[k])
+                i += len(k)
+                matched = True
+                break
+        if not matched:                      # pass through unknown chars
+            out.append(text[i])
+            i += 1
+
+    return "".join(out)
+
 # Function to process data
-def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2"):
+def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2", transcriber = None):
     # Load and resample audio data
     audio = batch["audio_path"]
     # Check if audio_path exists and is a file
@@ -21,28 +41,29 @@ def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2"):
     # Convert audio to array
     audio_array, _ = librosa.load(audio)
     
-    # Process audio, data created by data.py is already at 16kHz
+    # clean + tokenize text
+    batch["transcript"] = " ".join(batch["transcript"].strip().split())
+    text = batch["transcript"].replace(" ", word_delimiter_token)
+    if transcriber:
+        text = ipa_to_cyrillic(text, transcriber)
+        
+
     if mode == "wav2vec2":
         batch["input_values"] = processor(
             audio_array, 
             sampling_rate=16000, 
             return_tensors="pt"
         ).input_values[0]
+
+        with processor.as_target_processor():
+            batch["labels"] = processor(text).input_ids
     elif mode == "whisper":
         batch["input_features"] = processor(
             audio_array, 
             sampling_rate=16000, 
             return_tensors="pt"
         ).input_features[0]
-    
-    # clean + tokenize text
-    batch["transcript"] = " ".join(batch["transcript"].strip().split())
-    text = batch["transcript"].replace(" ", word_delimiter_token)
 
-    if mode == "wav2vec2":
-        with processor.as_target_processor():
-            batch["labels"] = processor(text).input_ids
-    elif mode == "whisper":
         # Whisper special tokens
         start_token = processor.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         lang_token  = processor.tokenizer.convert_tokens_to_ids("<|ru|>")      # closest language
@@ -56,10 +77,16 @@ def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2"):
 
         # prepend special whisper tokens
         batch["labels"] = [start_token, lang_token, task_token, no_ts_token] + tokens
+    elif mode == "qwen_audio":
+        # just store raw audio array; processor.tokenizer may be used for prompt text later
+        batch["input_values"] = audio_array.astype(np.float32)
+    
+        # optionally, encode transcript into vocab-aware token IDs
+        batch["labels"] = processor.tokenizer(text, add_special_tokens=True).input_ids
 
     return batch
 
-def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word_delimiter_token="|"):
+def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word_delimiter_token="|", transcriber = None):
     data_dir = Path(data_dir)
     output_dir = Path(output_dir)
     # A directory is usually structured with subfolders each containing a dataset.csv
@@ -109,7 +136,7 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word
         for ds_name, dataset in datasets:
             # Map the dataset with the processor, retain these columns: textgrid_path, tier_name, interval_id for traceability or remove audio_path and transcript
    
-            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token, mode=mode), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
+            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token, mode=mode, transcriber=transcriber), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
 
             # Save the processed dataset to output_dir / ds_name
             dataset.save_to_disk(output_dir / ds_name)
@@ -159,6 +186,12 @@ def parse_args():
         help="Token to use as word delimiter in transcripts.",
     )
 
+    parser.add_argument(
+        "--ipa-to-cyrillic",
+        type=str,
+        default=None,
+        help="Path to JSON file mapping IPA symbols to Cyrillic characters.",
+    )
     return parser.parse_args()
 
 def main():
@@ -170,9 +203,13 @@ def main():
     processor = AutoProcessor.from_pretrained(args.processor)
     mode = ""
     is_whisper = 'whisper' in processor.__class__.__name__.lower()
+    is_qwen = 'qwen' in processor.__class__.__name__.lower() or args.new_tokenizer == "qwen"
     mode = "whisper" if is_whisper else mode
     if is_whisper:
         word_delimiter_token = " "
+    elif is_qwen:
+        mode = "qwen_audio"
+        word_delimiter_token = " "  
     else:
         word_delimiter_token = args.word_delimiter_token
 
@@ -255,9 +292,14 @@ def main():
         model_name = args.processor.split("/")[-1]
         output_dir = output_dir / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
+   
+    transcriber = None 
+    if args.ipa_to_cyrillic:
+        transcriber = json.load(open(args.ipa_to_cyrillic, "r", encoding="utf-8"))
+        print(f"Loaded IPA to Cyrillic mapping from {args.ipa_to_cyrillic}")
         
     print(f"Using tokenizer with vocab size: {processor.tokenizer.vocab_size}")
-    tokenize_transcripts(data_dir, processor, output_dir, args.split_file, mode, word_delimiter_token)
+    tokenize_transcripts(data_dir, processor, output_dir, args.split_file, mode, word_delimiter_token, transcriber=transcriber)
     
 if __name__ == "__main__":
     main()
