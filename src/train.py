@@ -55,6 +55,11 @@ def parse_args():
         default=30,
         help="Number of training epochs. (default: 30, 10 for whisper models)",
     )
+    parser.add_argument(
+        "--full-shard",
+        action="store_true",
+        help="Use full sharding for model training to reduce memory usage.",
+    )
     
     return parser.parse_args()
 
@@ -87,7 +92,16 @@ class MySeq2SeqTrainer(Seq2SeqTrainer):
         labels = inputs.get("labels")
         inputs = {k: v for k, v in inputs.items() if k not in ("id", "labels")}
 
+        # Ensure gen_kwargs exists
+        gen_kwargs = gen_kwargs or {}
 
+        # Map HF generation arg -> max_new_tokens if provided
+        if self.args.generation_max_length is not None:
+            gen_kwargs.setdefault("max_new_tokens", self.args.generation_max_length)
+
+        # Whisper/Omni/Qwen-style return_audio handling
+        if hasattr(model, "thinker"):  # safer than "__dict__"
+            gen_kwargs.setdefault("return_audio", False)
         with torch.amp.autocast(device_type= 'cuda', enabled=True):
             # Standard prediction step
             loss, generated_tokens, _ = super().prediction_step(
@@ -132,7 +146,7 @@ def main():
     batch_size = args.batch_size
         
     print(f"Loading dataset from {data_dir}")
-    tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
+    tokenized_dataset = { split: load_from_disk(data_dir / split).select(range(2)) for split in ['train','validation','test'] }
 
     # create ids for each split for traceability
     for split in ['train','validation','test']:
@@ -143,6 +157,8 @@ def main():
     for split in ['train','validation','test']:
         if model_type == "whisper":
             keep_cols = ['input_features', 'labels', 'id']
+        elif model_type == "encoder-decoder-llm":  # Qwen / Omni
+            keep_cols = ['input_features', 'input_ids', 'feature_attention_mask', 'labels', 'id']
         else:  
             keep_cols = ['input_values', 'labels', 'id']
 
@@ -166,7 +182,7 @@ def main():
     else: # encoder-decoder-llm
         model = Qwen2AudioForConditionalGeneration.from_pretrained(model_name) if "audio" in model_name.lower() else Qwen2_5OmniForConditionalGeneration.from_pretrained(model_name)
     
-    if model_type == "encoder-llm":
+    if model_type == "encoder-decoder-llm":
         print("Freezing base LLM. Training audio tower + multimodal projector only.")
 
         # 1. Freeze EVERYTHING
@@ -206,8 +222,9 @@ def main():
         print(f"Trainable: {trainable/1e6:.2f}M / {total/1e9:.2f}B "
             f"({100*trainable/total:.4f}%)")
     # include id in model forward pass to be able to access it in compute_metrics
-    orig_forward = model.forward
-    model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
+    if model_type != "encoder-decoder-llm" or 'audio' in model_name.lower():
+        orig_forward = model.forward
+        model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
 
     #model.freeze_feature_encoder = True
     
@@ -217,32 +234,14 @@ def main():
     else:
         output_dir = Path('models') / Path(*data_dir.parts[1:])
         output_dir.mkdir(parents=True, exist_ok=True)
-        model.config.bos_token_id = processor.tokenizer.bos_token_id
-        model.config.eos_token_id = processor.tokenizer.eos_token_id
-        model.config.pad_token_id = processor.tokenizer.pad_token_id
         
     # define data collator
-    lang = data_dir.parts[1]
-    prompt = None
     if model_type == "ctc":
         data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
     elif model_type == "whisper":
         data_collator = DataCollatorWhisperWithPadding(processor=processor, padding=True)
     else: # encoder-decoder-llm
-        prompt = f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."
-        if "audio" in model_name.lower():
-            data_collator = DataCollatorQwenAudio(
-                processor=processor,
-                prompt=prompt,
-                is_omni=False
-            )
-        else:
-            data_collator = DataCollatorQwenAudio(
-                processor=processor,
-                prompt=prompt,
-                is_omni=True
-            )
-
+        data_collator = DataCollatorQwenAudio(processor=processor, padding=True)
     # define training args
     if model_type == "ctc":
         training_args = TrainingArguments(
@@ -277,17 +276,18 @@ def main():
             predict_with_generate=True,
             generation_max_length=128,
             generation_num_beams=1,  # beam search is expensive; keep 1 for training
-            fsdp="full_shard auto_wrap",
             save_total_limit=1,
             remove_unused_columns=False,
         )
+        if args.full_shard:
+            training_args.fsdp = "full_shard auto_wrap"
     # define trainer
     if model_type == "ctc":
         trainer = MyTrainer(
             model=model,
             data_collator=data_collator,
             args=training_args,
-            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type, prompt=prompt),
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
             train_dataset=input_dataset["train"],
             eval_dataset=input_dataset["validation"],
             processing_class=processor,
@@ -298,7 +298,7 @@ def main():
             model=model,
             data_collator=data_collator,
             args=training_args,
-            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type, prompt=prompt),
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
             train_dataset=input_dataset["train"],
             eval_dataset=input_dataset["validation"],
             tokenizer=processor.tokenizer,
@@ -316,7 +316,7 @@ def main():
                 shutil.rmtree(ckpt)
     
     print("Evaluating on test set")
-    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir), prompt=prompt)
+    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir))
     trainer.eval_dataset = input_dataset["test"]
     test_metrics = trainer.evaluate()
     print(f"Test set metrics: {test_metrics}")

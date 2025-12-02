@@ -7,8 +7,10 @@ import json
 from sklearn.model_selection import train_test_split
 from transformers import Wav2Vec2CTCTokenizer, AutoProcessor, WhisperTokenizerFast, WhisperFeatureExtractor, WhisperProcessor
 import librosa
-from datasets import Dataset, Features, Array2D, Sequence, Value
+from datasets import Dataset, concatenate_datasets
 import numpy as np
+import torch
+import warnings
 
 
 def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
@@ -30,35 +32,59 @@ def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
 
     return "".join(out)
 
+conversations = lambda lang: {
+    'qwen_audio': [{"role": "user", "content": [
+                        {"type": "audio"},     # audio will be bound by processor(audio=..)
+                        {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."},
+                    ]}],
+    'qwen_omni': [ {   
+                            "role": "system",
+                            "content": [
+                                {"type": "text", "text":
+                                    "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."
+                                }
+                            ],
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "audio"},                # binds to processor(..., audio=audios)
+                                {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."},
+                            ],
+                }]
+}
+
 # Function to process data
-def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2", transcriber = None):
+def prepare_dataset(example, processor, word_delimiter_token, mode="wav2vec2", transcriber = None, lang=None, split=None):
     # Load and resample audio data
-    audio = batch["audio_path"]
+    audio = example["audio_path"]
+    if lang:
+        if mode.startswith("qwen"):
+            prompt = conversations(lang)[mode]
     # Check if audio_path exists and is a file
     if not os.path.isfile(audio):
         raise FileNotFoundError(f"Audio file {audio} not found.")
     
     # Convert audio to array
-    audio_array, _ = librosa.load(audio)
+    audio_array, _ = librosa.load(audio, sr=16000)
     
     # clean + tokenize text
-    batch["transcript"] = " ".join(batch["transcript"].strip().split())
-    text = batch["transcript"].replace(" ", word_delimiter_token)
+    example["transcript"] = " ".join(example["transcript"].strip().split())
+    text = example["transcript"].replace(" ", word_delimiter_token)
     if transcriber:
         text = ipa_to_cyrillic(text, transcriber)
         
-
     if mode == "wav2vec2":
-        batch["input_values"] = processor(
+        example["input_values"] = processor(
             audio_array, 
             sampling_rate=16000, 
             return_tensors="pt"
         ).input_values[0]
 
         with processor.as_target_processor():
-            batch["labels"] = processor(text).input_ids
+            example["labels"] = processor(text).input_ids
     elif mode == "whisper":
-        batch["input_features"] = processor(
+        example["input_features"] = processor(
             audio_array, 
             sampling_rate=16000, 
             return_tensors="pt"
@@ -76,15 +102,41 @@ def prepare_dataset(batch, processor, word_delimiter_token, mode="wav2vec2", tra
         ).input_ids
 
         # prepend special whisper tokens
-        batch["labels"] = [start_token, lang_token, task_token, no_ts_token] + tokens
-    elif mode == "qwen_audio":
+        example["labels"] = [start_token, lang_token, task_token, no_ts_token] + tokens
+    elif "qwen" in mode:
         # just store raw audio array; processor.tokenizer may be used for prompt text later
-        batch["input_values"] = audio_array.astype(np.float32)
-    
+        texts = [
+            processor.apply_chat_template(prompt, add_generation_prompt=True, tokenize=False)
+        ]
+        inputs = processor(
+            text=texts,
+            audio=audio_array.astype(np.float32),
+            sampling_rate=16000,
+            return_tensors="pt",
+        )
+        
+        example["input_ids"] = inputs["input_ids"][0]
+        example["input_features"] = inputs["input_features"][0]
+        example["feature_attention_mask"] = inputs["feature_attention_mask"][0]
         # optionally, encode transcript into vocab-aware token IDs
-        batch["labels"] = processor.tokenizer(text, add_special_tokens=True).input_ids
+        example["labels"] = processor.tokenizer(text, add_special_tokens=True).input_ids
+        if split == 'train':
+            # 1) current prompt ids
+            prompt_ids = example["input_ids"]
 
-    return batch
+            # 2) answer ids (already tokenized above)
+            answer_ids = example["labels"]
+
+            # 3) concatenate for causal input sequence
+            full_ids = torch.tensor(prompt_ids.tolist() + answer_ids, dtype=torch.long)
+
+            # 4) build masked labels
+            mask_prompt = [-100] * len(prompt_ids)
+            full_labels = torch.tensor(mask_prompt + answer_ids, dtype=torch.long)
+
+            example["input_ids"] = full_ids
+            example["labels"] = full_labels
+    return example
 
 def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word_delimiter_token="|", transcriber = None):
     data_dir = Path(data_dir)
@@ -102,6 +154,8 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word
     output_dir = output_dir / split_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    lang = data_dir.parts[-1]  # assuming data_dir is like data/Rutul, get 'Rutul' as language name
+    print(f"Processing language: {lang}")
     for split, subfolders in splits.items():
         # create an list of dfs and concatenate all transcripts
         dfs = []
@@ -127,16 +181,39 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word
             train_dataset = Dataset.from_pandas(train_df, preserve_index=False)
             val_dataset = Dataset.from_pandas(val_df, preserve_index=False)
             # Process datasets
-            datasets = [("train", train_dataset), ("validation", val_dataset)]
+            datas = [("train", train_dataset), ("validation", val_dataset)]
         else:
             test_dataset = Dataset.from_pandas(all_transcripts_df, preserve_index=False)
-            datasets = [(split, test_dataset)]
-        
+            datas = [(split, test_dataset)]
 
-        for ds_name, dataset in datasets:
+        for ds_name, dataset in datas:
             # Map the dataset with the processor, retain these columns: textgrid_path, tier_name, interval_id for traceability or remove audio_path and transcript
-   
-            dataset = dataset.map(lambda batch: prepare_dataset(batch, processor, word_delimiter_token, mode=mode, transcriber=transcriber), remove_columns=[col for col in ["audio_path"] if col in dataset.column_names], num_proc=os.cpu_count())
+            batch_size = 500  # or tune depending on memory
+            processed_chunks = []
+
+            for start_idx in range(0, len(dataset), batch_size):
+                end_idx = min(start_idx + batch_size, len(dataset))
+                chunk = dataset.select(range(start_idx, end_idx))
+    
+                chunk = chunk.map(
+                    lambda example: prepare_dataset(
+                        example,
+                        processor,
+                        word_delimiter_token,
+                        mode=mode,
+                        transcriber=transcriber,
+                        lang=lang,
+                        split=ds_name
+                    ),
+                    remove_columns=[col for col in ["audio_path"] if col in chunk.column_names],
+                    num_proc=None,  # single process avoids multiprocessing issues
+                    batched=False,
+                    load_from_cache_file=False
+                )
+                processed_chunks.append(chunk)
+
+            # Concatenate all processed chunks back into a single dataset
+            dataset = concatenate_datasets(processed_chunks)
 
             # Save the processed dataset to output_dir / ds_name
             dataset.save_to_disk(output_dir / ds_name)
@@ -203,12 +280,14 @@ def main():
     processor = AutoProcessor.from_pretrained(args.processor)
     mode = ""
     is_whisper = 'whisper' in processor.__class__.__name__.lower()
-    is_qwen = 'qwen' in processor.__class__.__name__.lower() or args.new_tokenizer == "qwen"
+    is_qwen = 'qwen' in processor.__class__.__name__.lower()
     mode = "whisper" if is_whisper else mode
     if is_whisper:
         word_delimiter_token = " "
     elif is_qwen:
         mode = "qwen_audio"
+        if 'omni' in processor.__class__.__name__.lower():
+            mode = "qwen_omni"
         word_delimiter_token = " "  
     else:
         word_delimiter_token = args.word_delimiter_token

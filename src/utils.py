@@ -147,89 +147,62 @@ class DataCollatorWhisperWithPadding:
 
         return batch
 
+@dataclass
 class DataCollatorQwenAudio:
     """
-    Collator for Qwen2-Audio-Instruct and Qwen2.5-Omni (text-only),
-    using 'input_values' as raw audio array input.
+    Collator for Qwen2-Audio-Instruct and Qwen2.5-Omni.
+    Pads encoder audio features and labels for batching.
+    Keeps input_ids (prompt) as-is.
     """
-
-    def __init__(self, processor, prompt: str = "", padding: bool = True, is_omni: bool = False):
-        self.processor = processor
-        self.prompt = prompt
-        self.padding = padding
-        self.is_omni = is_omni  # False = Qwen2-Audio, True = Qwen2.5-Omni
+    processor: Any
+    padding: Union[bool, str] = True
 
     def __call__(self, features: list) -> dict:
-        # pull raw waveform from preprocess
-        audios = [f["input_values"] for f in features]  # <---- HERE
-
-        # build chat template messages
-        conversations = []
-        for f in features:
-            prompt_text = f.get("prompt", self.prompt)
-            if self.is_omni:
-                conversations.append([
-                        {
-                            "role": "system",
-                            "content": [
-                                {"type": "text", "text":
-                                    "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."
-                                }
-                            ],
-                        },
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "audio"},                # binds to processor(..., audio=audios)
-                                {"type": "text", "text": prompt_text},
-                            ],
-                        }
-                    ])
-            else:
-                conversations.append([
-                    {"role": "user", "content": [
-                        {"type": "audio"},     # audio will be bound by processor(audio=..)
-                        {"type": "text", "text": prompt_text},
-                    ]}
-                ])
-
-        texts = [
-            self.processor.apply_chat_template(conv, add_generation_prompt=True, tokenize=False)
-            for conv in conversations
-        ]
-
-        # Qwen2-Audio uses `audios=`, Omni uses `audio=`
-        if self.is_omni:
-            inputs = self.processor(
-                text=texts,
-                audio=audios,         # Qwen2.5-Omni
-                return_tensors="pt",
-                padding=self.padding
-            )
-        else:
-            inputs = self.processor(
-                text=texts,
-                audio=audios,        # Qwen2-Audio-Instruct
-                return_tensors="pt",
-                padding=self.padding
-            )
-
-        # process labels
-        label_inputs = [{"input_ids": f["labels"]} for f in features]
-        padded = self.processor.tokenizer.pad(
-            label_inputs, padding=self.padding, return_tensors="pt"
+        # ---------------------------------------
+        # 1. Pad encoder audio features
+        # ---------------------------------------
+        input_features = [{"input_features": f["input_features"]} for f in features]
+ 
+        batch = self.processor.feature_extractor.pad(
+            input_features,
+            return_tensors="pt",
+            padding=self.padding
         )
-        labels = padded["input_ids"]
-        labels = labels.masked_fill(padded.attention_mask.ne(1), -100)
 
-        batch = {**inputs, "labels": labels}
+        # Convert each list mask to a tensor of shape (1, seq_len)
+        feature_masks = [torch.tensor(f["feature_attention_mask"], dtype=torch.long).unsqueeze(0) for f in features]
 
+        # Concatenate along the batch dimension -> (batch_size, seq_len)
+        batch["feature_attention_mask"] = torch.cat(feature_masks, dim=0)
+        
+        input_ids = [{"input_ids": f["input_ids"]} for f in features]
+        batch.update(
+            self.processor.tokenizer.pad(
+                input_ids,
+                return_tensors="pt",
+                padding=self.padding,
+                padding_side='left',
+            )
+        )
+
+        # ---------------------------------------
+        # 3. Pad labels (masked for causal LM)
+        # ---------------------------------------
+        labels = [{"input_ids": f["labels"]} for f in features]
+        batch["labels"] = self.processor.tokenizer.pad(
+            labels,
+            return_tensors="pt",
+            padding=self.padding,
+            padding_side='left'
+        ).input_ids
+
+
+        # Optional: preserve ID
         if "id" in features[0]:
             batch["id"] = torch.tensor([f["id"] for f in features], dtype=torch.long)
 
         return batch
-
-     
+         
 # Define metrics for evaluation
 wer_metric = evaluate.load("wer")
 cer_metric = evaluate.load("cer")
@@ -386,33 +359,24 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     plt.show()
 
 
-def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default", prompt=None):
+def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default"):
     if model_type != "ctc":
         # pred_logits is a list/array of variable-length token sequences
         # Whisper outputs token sequences (possibly ragged)
         pred_ids = pred.predictions["generated_tokens"]
-
-        # remove prompt tokens if prompt is provided
-        if prompt is not None:
-            # encode prompt to get length
-            if hasattr(processor, "tokenizer"):  # Qwen/Whisper
-                prompt_ids = processor.tokenizer(prompt).input_ids
-            elif hasattr(processor, "text_processor"):  # alternative processor naming
-                prompt_ids = processor.text_processor(prompt).input_ids
-            else:
-                prompt_ids = processor(prompt, return_tensors="pt").input_ids[0]
-            prompt_len = len(prompt_ids)
-            # strip prompt tokens
-            pred_ids = pred_ids[:, prompt_len:] if pred_ids.ndim > 1 else pred_ids[prompt_len:]
-
-
+        
     else:
         # CTC branch
         pred_logits = pred.predictions["logits"]
         pred_ids = np.argmax(pred_logits, axis=-1)
-
+    
     pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
-    pred_str = [s.replace('#', ' ') for s in pred_str]
+
+    if model_type == "encoder-decoder-llm":
+        # remove prompt from the beginning of each prediction
+        pred_str = [s.split('assistant\n')[-1].strip() if 'assistant' in s else s for s in pred_str]  # for Qwen chat format
+    else:
+        pred_str = [s.replace('\n',' ').replace('#', ' ') for s in pred_str]
 
     # obtain ref_str from tokenized_dataset and align with pred_str using ids
     id_to_ref = {i: t for i, t in zip(tokenized_dataset["id"], tokenized_dataset["transcript"])}
