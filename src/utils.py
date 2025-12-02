@@ -364,6 +364,9 @@ def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_r
         # pred_logits is a list/array of variable-length token sequences
         # Whisper outputs token sequences (possibly ragged)
         pred_ids = pred.predictions["generated_tokens"]
+        ## replace -100 in pred_ids with pad_token_id
+        pad_token_id = processor.tokenizer.pad_token_id
+        pred_ids = [np.where(ids == -100, pad_token_id, ids) for ids in pred_ids]
         
     else:
         # CTC branch

@@ -154,14 +154,15 @@ def main():
 
     ## created input_dataset with only features "input_values", "labels" and "id" for memory efficiency
     input_dataset = {}
-    for split in ['train','validation','test']:
-        if model_type == "whisper":
-            keep_cols = ['input_features', 'labels', 'id']
-        elif model_type == "encoder-decoder-llm":  # Qwen / Omni
-            keep_cols = ['input_features', 'input_ids', 'feature_attention_mask', 'labels', 'id']
-        else:  
-            keep_cols = ['input_values', 'labels', 'id']
+    if model_type == "whisper":
+        keep_cols = ['input_features', 'labels', 'id']
+    elif model_type == "encoder-decoder-llm":  # Qwen / Omni
+        keep_cols = ['input_features', 'input_ids', 'feature_attention_mask', 'labels', 'id']
+    else:  
+        keep_cols = ['input_values', 'labels', 'id']
 
+    for split in ['train','validation','test']:
+        
         cols_to_remove = [col for col in tokenized_dataset[split].column_names if col not in keep_cols]
         input_dataset[split] = tokenized_dataset[split].remove_columns(cols_to_remove)
     
@@ -222,10 +223,33 @@ def main():
         print(f"Trainable: {trainable/1e6:.2f}M / {total/1e9:.2f}B "
             f"({100*trainable/total:.4f}%)")
     # include id in model forward pass to be able to access it in compute_metrics
-    if model_type != "encoder-decoder-llm" or 'audio' in model_name.lower():
-        orig_forward = model.forward
-        model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
+    orig_forward = model.forward
+    model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
+    if model_type == "encoder-decoder-llm":
+        old_pifg = model.prepare_inputs_for_generation
 
+        def patched_prepare_inputs_for_generation(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            input_features=None,             # <-- added
+            feature_attention_mask=None,     # <-- added
+            **kwargs,                        # keep kwargs
+        ):
+            # strip the new args before calling old function
+
+            # call original implementation without audio args
+            out = old_pifg(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                input_features=input_features,                     # <-- added
+                feature_attention_mask=feature_attention_mask,     # <-- added
+                **kwargs,
+            )
+
+
+            return out
+        model.prepare_inputs_for_generation = patched_prepare_inputs_for_generation.__get__(model)
     #model.freeze_feature_encoder = True
     
     ## output_dir is model_name if model_name is a path, else create a directory in results_dir
