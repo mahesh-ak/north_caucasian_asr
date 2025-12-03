@@ -169,7 +169,7 @@ def main():
             lr = 5e-6
     elif any(x in model_name.lower() for x in ["qwen", "omni", "audio-llama"]):
         model_type = "encoder-decoder-llm"
-        lr = 1e-5
+        lr = 5e-6
         num_epochs = min(num_epochs, 8)  # limit epochs for LLM fine
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
@@ -253,8 +253,9 @@ def main():
         if 'qwen2.5-omni' in model_name.lower():
             print("Applying LoRA to thinker.model and talker.model")
 
-            # Text reasoning LLM
+            lora_config.task_type = "SEQ_CLS"  # non-generative / encoder-type
             model.thinker.model = get_peft_model(model.thinker.model, lora_config)
+            
 
             # Speech/text generation LLM
             model.talker.model = get_peft_model(model.talker.model, lora_config)
