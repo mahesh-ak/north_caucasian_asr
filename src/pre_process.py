@@ -10,8 +10,6 @@ import librosa
 from datasets import Dataset, concatenate_datasets
 import numpy as np
 import torch
-import warnings
-
 
 def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
     keys = sorted(ipa2cyrl.keys(), key=len, reverse=True)  # longest first

@@ -11,13 +11,46 @@ from transformers import (
     Seq2SeqTrainer,
     AutoProcessor,
     Qwen2AudioForConditionalGeneration, 
-    Qwen2_5OmniForConditionalGeneration
+    Qwen2_5OmniForConditionalGeneration,
 )
+from torch.optim import AdamW
 from transformers.models.whisper import WhisperProcessor
 import torch
 import inspect
 import shutil
+from peft import LoraConfig, get_peft_model
 
+# Identify the LLM text module (inside thinker)
+
+lora_targets = [
+    "q_proj", "k_proj", "v_proj", "o_proj",
+    "gate_proj", "up_proj", "down_proj"
+]
+
+lora_config = LoraConfig(
+    r=8,                       # rank
+    lora_alpha=32,
+    lora_dropout=0.05,
+    target_modules=lora_targets,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+def customize_optimizer(model, args):
+    lora, audio = [], []
+    for n, p in model.named_parameters():
+        if p.requires_grad:
+            if "lora_" in n:
+                lora.append(p)
+            else:
+                audio.append(p)
+    optimizer = AdamW(
+        [
+            {"params": lora,  "lr": args.learning_rate*30,      "weight_decay": 0.0},
+            {"params": audio, "lr": args.learning_rate, "weight_decay": args.weight_decay},
+        ]
+    )
+    return optimizer
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -131,13 +164,13 @@ def main():
     if 'whisper' in model_name.lower():
         model_type = "whisper"
         lr = 1e-5
-        num_epochs = min(num_epochs, 10)  # limit epochs for whisper fine-tuning
+        num_epochs = min(num_epochs, 8)  # limit epochs for whisper fine-tuning
         if 'large' in model_name.lower():
             lr = 5e-6
     elif any(x in model_name.lower() for x in ["qwen", "omni", "audio-llama"]):
         model_type = "encoder-decoder-llm"
-        lr = 2e-5
-        num_epochs = min(num_epochs, 10)  # limit epochs for LLM fine
+        lr = 1e-5
+        num_epochs = min(num_epochs, 8)  # limit epochs for LLM fine
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
     results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
@@ -146,7 +179,7 @@ def main():
     batch_size = args.batch_size
         
     print(f"Loading dataset from {data_dir}")
-    tokenized_dataset = { split: load_from_disk(data_dir / split).select(range(2)) for split in ['train','validation','test'] }
+    tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
 
     # create ids for each split for traceability
     for split in ['train','validation','test']:
@@ -217,6 +250,20 @@ def main():
                 p.requires_grad = True
             print("✓ projector unfrozen")
 
+        if 'qwen2.5-omni' in model_name.lower():
+            print("Applying LoRA to thinker.model and talker.model")
+
+            # Text reasoning LLM
+            model.thinker.model = get_peft_model(model.thinker.model, lora_config)
+
+            # Speech/text generation LLM
+            model.talker.model = get_peft_model(model.talker.model, lora_config)
+
+        elif 'qwen2-audio' in model_name.lower():
+            print("Applying LoRA to language_model")
+
+            # Only one LLM in Qwen2-Audio
+            model.language_model = get_peft_model(model.language_model, lora_config) 
         # 4. Report
         trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
         total = sum(p.numel() for p in model.parameters())
@@ -295,7 +342,7 @@ def main():
             num_train_epochs=num_epochs,
             fp16=torch.cuda.is_available(),
             learning_rate=lr,
-            warmup_steps=100,
+            warmup_ratio=0.1,
             weight_decay=0.01,
             predict_with_generate=True,
             generation_max_length=128,
@@ -305,6 +352,9 @@ def main():
         )
         if args.full_shard:
             training_args.fsdp = "full_shard auto_wrap"
+        if 'qwen2.5-omni' in model_name.lower() or 'qwen2-audio' in model_name.lower():
+            print("Using customized optimizer for LoRA + audio tower training")
+            training_args.optimizers = (customize_optimizer(model, training_args), None)
     # define trainer
     if model_type == "ctc":
         trainer = MyTrainer(
