@@ -1,4 +1,5 @@
 lang,model_name,split_name,wer,cer,per
+Archi,Qwen2-Audio-7B-Instruct,split,0.887,0.336,0.324
 Archi,custom,split,0.514,0.124,0.131
 Archi,custom,split_noinit,0.851,0.282,0.283
 Archi,custom,zero_shot,1.0,0.544,0.558
@@ -7,6 +8,7 @@ Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split,0.564,0.14,0.147
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.593,0.606
 Archi,whisper-large-v3,split,0.408,0.099,0.107
 Archi,whisper-small,split,0.526,0.157,0.166
+Rutul,Qwen2-Audio-7B-Instruct,split1,1.429,0.837,0.521
 Rutul,custom,split1,0.744,0.206,0.204
 Rutul,custom,split1_noinit,0.82,0.237,0.233
 Rutul,custom,split2,0.904,0.279,0.268
