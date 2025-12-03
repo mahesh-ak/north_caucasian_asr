@@ -49,7 +49,14 @@ conversations = lambda lang: {
                                 {"type": "audio"},                # binds to processor(..., audio=audios)
                                 {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."},
                             ],
-                }]
+                }],
+    'phi': [
+            {
+                "role": "user",
+                "content": f"<|audio_1|>Transcribe the audio in {lang} (a North Caucasian language) into IPA (International Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."
+            }
+        ]
+
 }
 
 # Function to process data
@@ -57,14 +64,14 @@ def prepare_dataset(example, processor, word_delimiter_token, mode="wav2vec2", t
     # Load and resample audio data
     audio = example["audio_path"]
     if lang:
-        if mode.startswith("qwen"):
+        if mode.startswith("qwen") or mode == "phi":
             prompt = conversations(lang)[mode]
     # Check if audio_path exists and is a file
     if not os.path.isfile(audio):
         raise FileNotFoundError(f"Audio file {audio} not found.")
     
     # Convert audio to array
-    audio_array, _ = librosa.load(audio, sr=16000)
+    audio_array, sr = librosa.load(audio, sr=16000)
     
     # clean + tokenize text
     example["transcript"] = " ".join(example["transcript"].strip().split())
@@ -134,6 +141,47 @@ def prepare_dataset(example, processor, word_delimiter_token, mode="wav2vec2", t
 
             example["input_ids"] = full_ids
             example["labels"] = full_labels
+    elif mode == "phi":
+        # Convert audio path to waveform & tokenize prompt via chat-template
+        prompt_ids = processor.apply_chat_template(
+            prompt,
+            add_generation_prompt=True,   # ensures <assistant> position for generation/loss
+            tokenize=False,
+        )
+
+        inputs = processor(
+            text=prompt_ids,
+            audios=[(audio_array.astype(np.float32), 16000)],
+            return_tensors="pt",
+        )
+
+        # input_ids for model forward()
+        example = {k: v[0] for k, v in inputs.items() if v is not None and len(v) > 0}
+
+        # Tokenize answer (transcript) as labels
+        answer_ids = processor.tokenizer(text, add_special_tokens=True).input_ids
+
+        if split == "train":
+            # prompt_ids first, answer_ids after
+            prompt_ids = example["input_ids"]
+
+            full_ids = torch.tensor(
+                prompt_ids.tolist() + answer_ids,
+                dtype=torch.long
+            )
+
+            # labels = ignore prompt, supervise only answer tokens
+            labels = torch.tensor(
+                [-100] * len(prompt_ids) + answer_ids,
+                dtype=torch.long
+            )
+
+            example["input_ids"] = full_ids
+            example["labels"] = labels
+        else:
+            # evaluation mode: no concatenation
+            example["labels"] = torch.tensor(answer_ids, dtype=torch.long)
+
     return example
 
 def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word_delimiter_token="|", transcriber = None):
@@ -275,10 +323,11 @@ def main():
     output_dir = Path(args.output_dir) if args.output_dir else "tokenized_data" / Path(*data_dir.parts[1:])
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    processor = AutoProcessor.from_pretrained(args.processor)
+    processor = AutoProcessor.from_pretrained(args.processor, trust_remote_code=True)
     mode = ""
     is_whisper = 'whisper' in processor.__class__.__name__.lower()
     is_qwen = 'qwen' in processor.__class__.__name__.lower()
+    is_phi = 'phi' in processor.__class__.__name__.lower()
     mode = "whisper" if is_whisper else mode
     if is_whisper:
         word_delimiter_token = " "
@@ -287,6 +336,9 @@ def main():
         if 'omni' in processor.__class__.__name__.lower():
             mode = "qwen_omni"
         word_delimiter_token = " "  
+    elif is_phi:
+        mode = "phi"
+        word_delimiter_token = " "
     else:
         word_delimiter_token = args.word_delimiter_token
 
@@ -295,8 +347,8 @@ def main():
     if not mode:
         print("Unsupported processor type. Only Whisper and Wav2Vec2 are supported.")
         sys.exit(1)
-    # Load the tokenizer
-    if args.new_tokenizer:
+    # Load the tokenizer only for wav2vec2 mode
+    if args.new_tokenizer and mode in ["wav2vec2"]:
         print("Creating a new tokenizer based on vocab.json in data_dir")
         vocab_file = data_dir / "vocab.json"
         if not vocab_file.exists():
@@ -304,49 +356,19 @@ def main():
             sys.exit(1)
 
         # -------------------------------
-        # Detect if processor is Whisper
+        # Existing Wav2Vec2 tokenizer
         # -------------------------------
-        
-
-        if is_whisper:
-            # -------------------------------
-            # Build Whisper tokenizer
-            # -------------------------------
-            with open(vocab_file, "r", encoding="utf-8") as f:
-                vocab = json.load(f)
-
-            tokenizer = WhisperTokenizerFast(
-                vocab=vocab,
-                bos_token="<s>",
-                eos_token="</s>",
-                unk_token="<unk>",
-                pad_token="<pad>",
-            )
-
-            tokenizer.set_prefix_tokens([])
-            # Whisper needs its feature extractor
-            feature_extractor = WhisperFeatureExtractor.from_pretrained(args.processor)
-
-            processor = WhisperProcessor(
-                feature_extractor=feature_extractor,
-                tokenizer=tokenizer,
-            )
-
-        else:
-            # -------------------------------
-            # Existing Wav2Vec2 tokenizer
-            # -------------------------------
-            mode = "wav2vec2"
-            tokenizer = Wav2Vec2CTCTokenizer(
-                vocab_file=vocab_file,
-                word_delimiter_token=args.word_delimiter_token,
-                unk_token="<unk>",
-                pad_token="<pad>",
-                bos_token="<s>",
-                eos_token="</s>",
-                model_max_length=1024,
-            )
-            processor.tokenizer = tokenizer
+        mode = "wav2vec2"
+        tokenizer = Wav2Vec2CTCTokenizer(
+            vocab_file=vocab_file,
+            word_delimiter_token=args.word_delimiter_token,
+            unk_token="<unk>",
+            pad_token="<pad>",
+            bos_token="<s>",
+            eos_token="</s>",
+            model_max_length=1024,
+        )
+        processor.tokenizer = tokenizer
 
         # -------------------------------
         # Save processor

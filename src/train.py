@@ -14,7 +14,6 @@ from transformers import (
     Qwen2_5OmniForConditionalGeneration,
 )
 from torch.optim import AdamW
-from transformers.models.whisper import WhisperProcessor
 import torch
 import inspect
 import shutil
@@ -46,7 +45,7 @@ def customize_optimizer(model, args):
                 audio.append(p)
     optimizer = AdamW(
         [
-            {"params": lora,  "lr": args.learning_rate*30,      "weight_decay": 0.0},
+            {"params": lora,  "lr": args.learning_rate*20,      "weight_decay": 0.0},
             {"params": audio, "lr": args.learning_rate, "weight_decay": args.weight_decay},
         ]
     )
@@ -164,13 +163,13 @@ def main():
     if 'whisper' in model_name.lower():
         model_type = "whisper"
         lr = 1e-5
-        num_epochs = min(num_epochs, 8)  # limit epochs for whisper fine-tuning
+        num_epochs = min(num_epochs, 10)  # limit epochs for whisper fine-tuning
         if 'large' in model_name.lower():
             lr = 5e-6
     elif any(x in model_name.lower() for x in ["qwen", "omni", "audio-llama"]):
         model_type = "encoder-decoder-llm"
         lr = 5e-6
-        num_epochs = min(num_epochs, 8)  # limit epochs for LLM fine
+        num_epochs = min(num_epochs, 5)  # limit epochs for LLM fine
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
     results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
@@ -251,14 +250,10 @@ def main():
             print("✓ projector unfrozen")
 
         if 'qwen2.5-omni' in model_name.lower():
-            print("Applying LoRA to thinker.model and talker.model")
+            print("Applying LoRA to thinker.model")
 
             lora_config.task_type = "SEQ_CLS"  # non-generative / encoder-type
             model.thinker.model = get_peft_model(model.thinker.model, lora_config)
-            
-
-            # Speech/text generation LLM
-            model.talker.model = get_peft_model(model.talker.model, lora_config)
 
         elif 'qwen2-audio' in model_name.lower():
             print("Applying LoRA to language_model")
@@ -271,6 +266,37 @@ def main():
         print(f"Trainable: {trainable/1e6:.2f}M / {total/1e9:.2f}B "
             f"({100*trainable/total:.4f}%)")
     # include id in model forward pass to be able to access it in compute_metrics
+    if 'qwen' in model_name.lower() and 'omni' in model_name.lower():
+        def forward_wrapper(
+            self,
+            input_ids: Optional[torch.LongTensor] = None,
+            input_features: Optional[torch.FloatTensor] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            feature_attention_mask: Optional[torch.Tensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            return_dict: Optional[bool] = True,
+            output_hidden_states: Optional[bool] = False,
+            output_attentions: Optional[bool] = False,
+            **kwargs
+        ):
+            """
+            Wrapper forward function to pass everything to thinker.
+            Required args: input_ids, input_features, attention_mask, labels
+            """
+            return self.thinker.forward(
+                input_ids=input_ids,
+                input_features=input_features,
+                attention_mask=attention_mask,
+                feature_attention_mask=feature_attention_mask,
+                labels=labels,
+                return_dict=return_dict,
+                output_hidden_states=output_hidden_states,
+                output_attentions=output_attentions,
+                **kwargs
+            )
+        
+        model.forward = forward_wrapper.__get__(model)
+
     orig_forward = model.forward
     model.forward = lambda *a, **kw: (out := orig_forward(*a, **{k:v for k,v in kw.items() if k in inspect.signature(orig_forward).parameters})) or {**out, "id": kw.get("id")}
     if model_type == "encoder-decoder-llm":
@@ -330,6 +356,9 @@ def main():
             save_total_limit=1,
             push_to_hub=False,
             remove_unused_columns=False,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_cer",   # <--- use the exact key
+            greater_is_better=False             # lower CER is better
         )
     else:
         # Whisper uses seq2seq generation
@@ -343,13 +372,16 @@ def main():
             num_train_epochs=num_epochs,
             fp16=torch.cuda.is_available(),
             learning_rate=lr,
-            warmup_ratio=0.1,
+            warmup_ratio=0.2,
             weight_decay=0.01,
             predict_with_generate=True,
             generation_max_length=128,
             generation_num_beams=1,  # beam search is expensive; keep 1 for training
             save_total_limit=1,
             remove_unused_columns=False,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_cer",   # <--- use the exact key
+            greater_is_better=False             # lower CER is better
         )
         if args.full_shard:
             training_args.fsdp = "full_shard auto_wrap"
