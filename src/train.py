@@ -155,7 +155,13 @@ def main():
     args = parse_args()
     model_name = args.model_dir
     data_dir = Path(args.data_dir)
-
+    
+    cyrl2ipa = None
+    if 'cyrillic' in data_dir.parts[1].lower():
+        with open(data_dir.parent / "ipa2cyrl.json", "r", encoding="utf-8") as f:
+            ipa2cyrl = json.load(f)
+        cyrl2ipa = invert_mapping(ipa2cyrl)
+        
     model_type = "ctc"
     lr = 3e-4
     num_epochs = args.num_epochs
@@ -371,7 +377,7 @@ def main():
             save_strategy="epoch",
             num_train_epochs=num_epochs,
             #fp16=torch.cuda.is_available(),
-            bf16=torch.cuda.is_available(),
+            #bf16=torch.cuda.is_available(),
             learning_rate=lr,
             warmup_ratio=0.2,
             weight_decay=0.01,
@@ -386,16 +392,19 @@ def main():
         )
         if args.full_shard:
             training_args.fsdp = "full_shard auto_wrap"
+        if 'whisper' in model_name.lower():
+            training_args.fp16 = torch.cuda.is_available()
         if 'qwen2.5-omni' in model_name.lower() or 'qwen2-audio' in model_name.lower():
             print("Using customized optimizer for LoRA + audio tower training")
             training_args.optimizers = (customize_optimizer(model, training_args), None)
+            training_args.bf16 = torch.cuda.is_available()
     # define trainer
     if model_type == "ctc":
         trainer = MyTrainer(
             model=model,
             data_collator=data_collator,
             args=training_args,
-            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type,cyrl2ipa=cyrl2ipa),
             train_dataset=input_dataset["train"],
             eval_dataset=input_dataset["validation"],
             processing_class=processor,
@@ -406,7 +415,7 @@ def main():
             model=model,
             data_collator=data_collator,
             args=training_args,
-            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type),
+            compute_metrics=lambda pred: compute_metrics(pred, processor, tokenized_dataset['validation'], model_type=model_type,cyrl2ipa=cyrl2ipa),
             train_dataset=input_dataset["train"],
             eval_dataset=input_dataset["validation"],
             tokenizer=processor.tokenizer,
@@ -424,7 +433,7 @@ def main():
                 shutil.rmtree(ckpt)
     
     print("Evaluating on test set")
-    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir))
+    trainer.compute_metrics = lambda pred: compute_metrics(pred, processor, tokenized_dataset['test'], model_type=model_type, save_results=True, results_folder=str(results_dir),cyrl2ipa=cyrl2ipa)
     trainer.eval_dataset = input_dataset["test"]
     test_metrics = trainer.evaluate()
     print(f"Test set metrics: {test_metrics}")

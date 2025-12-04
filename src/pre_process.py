@@ -30,10 +30,10 @@ def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
 
     return "".join(out)
 
-conversations = lambda lang: {
+conversations = lambda lang, is_cyrillic: {
     'qwen_audio': [{"role": "user", "content": [
                         {"type": "audio"},     # audio will be bound by processor(audio=..)
-                        {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."},
+                        {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
                     ]}],
     'qwen_omni': [ {   
                             "role": "system",
@@ -47,7 +47,7 @@ conversations = lambda lang: {
                             "role": "user",
                             "content": [
                                 {"type": "audio"},                # binds to processor(..., audio=audios)
-                                {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."},
+                                {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
                             ],
                 }],
     'phi': [
@@ -62,10 +62,13 @@ conversations = lambda lang: {
 # Function to process data
 def prepare_dataset(example, processor, word_delimiter_token, mode="wav2vec2", transcriber = None, lang=None, split=None):
     # Load and resample audio data
+    is_cyrillic = False
+    if transcriber:
+        is_cyrillic = True
     audio = example["audio_path"]
     if lang:
         if mode.startswith("qwen") or mode == "phi":
-            prompt = conversations(lang)[mode]
+            prompt = conversations(lang, is_cyrillic)[mode]
     # Check if audio_path exists and is a file
     if not os.path.isfile(audio):
         raise FileNotFoundError(f"Audio file {audio} not found.")
@@ -248,6 +251,11 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word
             # Save the processed dataset to output_dir / ds_name
             dataset.save_to_disk(output_dir / ds_name)
             print(f"Saved {ds_name} dataset with {len(dataset)} samples to {output_dir / ds_name}")
+        if transcriber:
+            # Save the transcriber mapping used
+            with open(output_dir / "ipa2cyrl.json", "w", encoding="utf-8") as f:
+                json.dump(transcriber, f, ensure_ascii=False, indent=4)
+            print(f"Saved IPA to Cyrillic mapping to {output_dir / 'ipa2cyrl.json'}")
     
 
 def parse_args():
