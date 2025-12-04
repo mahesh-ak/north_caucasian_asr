@@ -109,38 +109,18 @@ def prepare_dataset(example, processor, word_delimiter_token, mode="wav2vec2", t
         # prepend special whisper tokens
         example["labels"] = [start_token, lang_token, task_token, no_ts_token] + tokens
     elif "qwen" in mode:
-        # just store raw audio array; processor.tokenizer may be used for prompt text later
-        texts = [
-            processor.apply_chat_template(prompt, add_generation_prompt=True, tokenize=False)
-        ]
-        inputs = processor(
-            text=texts,
-            audio=audio_array.astype(np.float32),
-            sampling_rate=16000,
-            return_tensors="pt",
-        )
         
-        example["input_ids"] = inputs["input_ids"][0]
-        example["input_features"] = inputs["input_features"][0]
-        example["feature_attention_mask"] = inputs["feature_attention_mask"][0]
-        # optionally, encode transcript into vocab-aware token IDs
-        example["labels"] = processor.tokenizer(text, add_special_tokens=True).input_ids
+        example["audio_array"] = audio_array.astype(np.float32)
+
         if split == 'train':
-            # 1) current prompt ids
-            prompt_ids = example["input_ids"]
+            prompt.append({"role": "assistant", "content": [{"type": "text", "text": text}]})  # for generation position
+            example["prompts"] = processor.apply_chat_template(prompt, add_generation_prompt=False, tokenize=False)
+            example["labels"] = text
+        else:
+            example["prompts"] = processor.apply_chat_template(prompt, add_generation_prompt=True, tokenize=False)
 
-            # 2) answer ids (already tokenized above)
-            answer_ids = example["labels"]
+        
 
-            # 3) concatenate for causal input sequence
-            full_ids = torch.tensor(prompt_ids.tolist() + answer_ids, dtype=torch.long)
-
-            # 4) build masked labels
-            mask_prompt = [-100] * len(prompt_ids)
-            full_labels = torch.tensor(mask_prompt + answer_ids, dtype=torch.long)
-
-            example["input_ids"] = full_ids
-            example["labels"] = full_labels
     elif mode == "phi":
         # Convert audio path to waveform & tokenize prompt via chat-template
         prompt_ids = processor.apply_chat_template(

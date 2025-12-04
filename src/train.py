@@ -189,7 +189,7 @@ def main():
     if model_type == "whisper":
         keep_cols = ['input_features', 'labels', 'id']
     elif model_type == "encoder-decoder-llm":  # Qwen / Omni
-        keep_cols = ['input_features', 'input_ids', 'feature_attention_mask', 'labels', 'id']
+        keep_cols = ['labels', 'id','prompts','transcript','audio_array']
     else:  
         keep_cols = ['input_values', 'labels', 'id']
 

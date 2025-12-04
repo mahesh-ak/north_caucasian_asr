@@ -161,41 +161,29 @@ class DataCollatorQwenAudio:
         # ---------------------------------------
         # 1. Pad encoder audio features
         # ---------------------------------------
-        input_features = [{"input_features": f["input_features"]} for f in features]
+        prompts = [f["prompts"] for f in features]
+        audios = [f["audio_array"] for f in features]
  
-        batch = self.processor.feature_extractor.pad(
-            input_features,
+        batch = self.processor(
+            text=prompts,
+            audio=audios,
+            sampling_rate=16000,
             return_tensors="pt",
-            padding=self.padding
+            padding=True
         )
 
-        # Convert each list mask to a tensor of shape (1, seq_len)
-        feature_masks = [torch.tensor(f["feature_attention_mask"], dtype=torch.long).unsqueeze(0) for f in features]
+        if "labels" in features[0]:
+            # copy labels from batch["input_ids"], tokenize f["labels"] and mark the left part as -100
+            batch["labels"] = batch["input_ids"].clone()
+            for i, f in enumerate(features):
+                prompt_len = batch["attention_mask"][i].tolist().index(0) if 0 in batch["attention_mask"][i].tolist() else len(batch["attention_mask"][i])
+                label_ids = self.processor.tokenizer(f["labels"], return_tensors="pt", add_special_tokens=False).input_ids.squeeze(0)
+                label_len = label_ids.size(0)
 
-        # Concatenate along the batch dimension -> (batch_size, seq_len)
-        batch["feature_attention_mask"] = torch.cat(feature_masks, dim=0)
-        
-        input_ids = [{"input_ids": f["input_ids"]} for f in features]
-        batch.update(
-            self.processor.tokenizer.pad(
-                input_ids,
-                return_tensors="pt",
-                padding=self.padding,
-                padding_side='left',
-            )
-        )
-
-        # ---------------------------------------
-        # 3. Pad labels (masked for causal LM)
-        # ---------------------------------------
-        labels = [{"input_ids": f["labels"]} for f in features]
-        batch["labels"] = self.processor.tokenizer.pad(
-            labels,
-            return_tensors="pt",
-            padding=self.padding,
-            padding_side='left'
-        ).input_ids
-
+                # Replace prompt part with -100
+                batch["labels"][i, :prompt_len-label_len-2] = -100
+        else:
+            batch["labels"] = self.processor.tokenizer([f["transcript"] for f in features], add_special_tokens=False, return_tensors="pt", padding=True, padding_side='right').input_ids  # dummy
 
         # Optional: preserve ID
         if "id" in features[0]:
