@@ -27,10 +27,10 @@ lora_targets = [
 ]
 
 lora_config = LoraConfig(
-    r=8,                       # rank
+    r=16,                       # rank
     lora_alpha=32,
     lora_dropout=0.05,
-    target_modules=lora_targets,
+    target_modules='all-linear',#lora_targets,
     bias="none",
     task_type="CAUSAL_LM"
 )
@@ -169,7 +169,7 @@ def main():
     elif any(x in model_name.lower() for x in ["qwen", "omni", "audio-llama"]):
         model_type = "encoder-decoder-llm"
         lr = 5e-6
-        num_epochs = min(num_epochs, 5)  # limit epochs for LLM fine
+        num_epochs = min(num_epochs, 8)  # limit epochs for LLM fine
     ## data_dir format: tokenized_data/<lang>/<partial_model_name>/<split_name> and contains subdirs train, dev, test
     ## partial_model_name is the model name without the path
     results_dir = Path(args.results_dir) if args.results_dir else Path("results") / Path(*data_dir.parts[1:])
@@ -353,7 +353,7 @@ def main():
             num_train_epochs=num_epochs,
             fp16=torch.cuda.is_available(),
             learning_rate=lr,
-            save_total_limit=1,
+            save_total_limit=2,
             push_to_hub=False,
             remove_unused_columns=False,
             load_best_model_at_end=True,
@@ -370,14 +370,15 @@ def main():
             eval_strategy="epoch",
             save_strategy="epoch",
             num_train_epochs=num_epochs,
-            fp16=torch.cuda.is_available(),
+            #fp16=torch.cuda.is_available(),
+            bf16=torch.cuda.is_available(),
             learning_rate=lr,
             warmup_ratio=0.2,
             weight_decay=0.01,
             predict_with_generate=True,
             generation_max_length=128,
             generation_num_beams=1,  # beam search is expensive; keep 1 for training
-            save_total_limit=1,
+            save_total_limit=2,
             remove_unused_columns=False,
             load_best_model_at_end=True,
             metric_for_best_model="eval_cer",   # <--- use the exact key
