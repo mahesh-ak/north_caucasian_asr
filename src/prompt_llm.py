@@ -6,7 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from utils import compute_char_stats, plot_confusion_matrix, wer_metric, cer_metric
+from utils import compute_char_stats, plot_confusion_matrix, wer_metric, cer_metric, cyrillic_to_ipa, invert_mapping
 from openai import OpenAI
 import base64
 import io
@@ -45,12 +45,14 @@ def collect_split_samples(data_dir, split_json, split_name):
 
     return samples
 
-def compute_metrics_openai(pred_str, ref_str, save_results=False, results_folder="results/openai"):
+def compute_metrics_openai(pred_str, ref_str, save_results=False, results_folder="results/openai", cyrl2ipa=None):
     """
     Compute WER, CER, PER and confusion stats using your existing utilities and metric objects
     (wer_metric, cer_metric) imported from utils.py. pred_str and ref_str must be lists of strings.
     """
-
+    
+    if cyrl2ipa: 
+        pred_str = [cyrillic_to_ipa(s, cyrl2ipa) for s in pred_str]
     # compute standard metrics via your imported metric objects
     wer_val = wer_metric.compute(predictions=pred_str, references=ref_str)
     cer_val = cer_metric.compute(predictions=pred_str, references=ref_str)
@@ -163,7 +165,10 @@ def run_inference(data_dir, split_json, split_name, model_name, results_dir, pro
         preds.append(pred)
         refs.append(ref)
 
-    eval_summary = compute_metrics_openai(preds, refs, save_results=True, results_folder=results_dir)
+    with open(Path(data_dir) / "ipa2cyrl.json", "r", encoding="utf-8") as f:
+        ipa2cyrl = json.load(f)
+    cyrl2ipa = invert_mapping(ipa2cyrl)
+    eval_summary = compute_metrics_openai(preds, refs, save_results=True, results_folder=results_dir, cyrl2ipa=cyrl2ipa)
     print(eval_summary)
 
 
@@ -179,7 +184,7 @@ def parse_args():
                      help="Folder to save inference results. If not provided, defaults to results/<data_dir.parts[1:]>/<model>/<split name>")
     p.add_argument(
                     "--prompt",
-                    default="Transcribe the audio in {lang} (a North Caucasian language) into IPA (Internation Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription.",
+                    default="Transcribe the audio in {lang} (a North Caucasian language) into Cyrillic. Do not translate, interpret, or add punctuation. Output only the transcription.",
                     help="Optional transcription prompt for IPA output"
                 )
     p.add_argument("--vocab", required=False,

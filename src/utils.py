@@ -60,6 +60,36 @@ def space_separate(sent):
 
     return phonemes
 
+def invert_mapping(ipa2cyrl: dict) -> dict:
+    """Safe inverse: ensure no collisions."""
+    cyrl2ipa = {}
+    for ipa, cyrl in ipa2cyrl.items():
+        if cyrl in cyrl2ipa:
+            print(f"Warning: Collision for '{cyrl}' ({cyrl2ipa[cyrl]} vs {ipa})")
+            continue
+        cyrl2ipa[cyrl] = ipa
+    return cyrl2ipa
+
+def cyrillic_to_ipa(text: str, cyrl2ipa: dict) -> str:
+    text = text.strip().lower()
+    keys = sorted(cyrl2ipa.keys(), key=len, reverse=True)
+    i, n = 0, len(text)
+    out = []
+
+    while i < n:
+        matched = False
+        for k in keys:
+            if text.startswith(k, i):
+                out.append(cyrl2ipa[k])
+                i += len(k)
+                matched = True
+                break
+        if not matched:
+            out.append(text[i])
+            i += 1
+
+    return "".join(out)
+
 ## Data collator that will dynamically pad the inputs received, as well as the labels.
 @dataclass
 class DataCollatorCTCWithPadding:
@@ -347,7 +377,7 @@ def plot_confusion_matrix(cm, labels, title="Normalized Phoneme Confusion Matrix
     plt.show()
 
 
-def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default"):
+def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_results=False, results_folder="results/default", cyrl2ipa=None):
     if model_type != "ctc":
         # pred_logits is a list/array of variable-length token sequences
         # Whisper outputs token sequences (possibly ragged)
@@ -369,6 +399,9 @@ def compute_metrics(pred, processor, tokenized_dataset, model_type='ctc', save_r
     else:
         pred_str = [s.replace('\n',' ').replace('#', ' ') for s in pred_str]
 
+    if cyrl2ipa: 
+        pred_str = [cyrillic_to_ipa(s, cyrl2ipa) for s in pred_str]
+        
     # obtain ref_str from tokenized_dataset and align with pred_str using ids
     id_to_ref = {i: t for i, t in zip(tokenized_dataset["id"], tokenized_dataset["transcript"])}
     ref_str = [id_to_ref[i] for i in pred.predictions["id"]]

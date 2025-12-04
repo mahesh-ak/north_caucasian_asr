@@ -178,6 +178,10 @@ def tokenize_transcripts(data_dir, processor, output_dir, split_file, mode, word
     # get the name without extension and preceeding path, e.g. data/Rutul/ --->
     split_name = split_file.stem
     output_dir = output_dir / split_name
+
+    ## output_dir should look like tokenized_data/<lang>/<model_name>/<split_name>_cyrillic
+    if transcriber:
+        output_dir = output_dir.parent / (output_dir.name + "_cyrillic")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     lang = data_dir.parts[-1]  # assuming data_dir is like data/Rutul, get 'Rutul' as language name
@@ -376,7 +380,6 @@ def main():
     if args.ipa_to_cyrillic:
         transcriber = json.load(open(args.ipa_to_cyrillic, "r", encoding="utf-8"))
         print(f"Loaded IPA to Cyrillic mapping from {args.ipa_to_cyrillic}")
-        
     print(f"Using tokenizer with vocab size: {processor.tokenizer.vocab_size}")
     tokenize_transcripts(data_dir, processor, output_dir, args.split_file, mode, word_delimiter_token, transcriber=transcriber)
     
