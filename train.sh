@@ -1,4 +1,6 @@
 #python src/modelling_custom.py
+torchrun --nproc_per_node=1 src/train.py --model-dir models/Rutul/custom/split1_noavg --data-dir tokenized_data/Rutul/custom/split1 --results-dir results/Rutul/custom/split1_noavg --num-epochs 30 --batch-size 6
+torchrun --nproc_per_node=1 src/train.py --model-dir models/Archi/custom/split_noavg --data-dir tokenized_data/Archi/custom/split --results-dir results/Archi/custom/split_noavg --num-epochs 30 --batch-size 6
 #torchrun --nproc_per_node=2 src/train.py --model-dir models/Rutul/custom/split1 --data-dir tokenized_data/Rutul/custom/split3 --results-dir results/Rutul/custom/zero_shot --num-epochs 0 --batch-size 1
 #torchrun --nproc_per_node=2 src/train.py --model-dir models/Archi/custom/split --data-dir tokenized_data/Archi/custom/split --results-dir results/Archi/custom/zero_shot --num-epochs 0 --batch-size 1
 #torchrun --nproc_per_node=2 src/train.py --model-dir models/Rutul/custom/split1 --data-dir tokenized_data/Rutul/custom/split1 --num-epochs 30 --batch-size 1
@@ -21,8 +23,8 @@
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2-Audio-7B-Instruct --data-dir tokenized_data/Rutul/Qwen2-Audio-7B-Instruct/split1 --num-epochs 6 --batch-size 2 #--full-shard
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2.5-Omni-7B --data-dir tokenized_data/Archi/Qwen2.5-Omni-7B/split --num-epochs 6 --batch-size 2 #--full-shard
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2.5-Omni-7B --data-dir tokenized_data/Rutul/Qwen2.5-Omni-7B/split1 --num-epochs 6 --batch-size 2 #--full-shard
-torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir openai/whisper-large-v3 --data-dir tokenized_data/Rutul/whisper-large-v3/split1_cyrillic --num-epochs 10 --batch-size 2
-torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir openai/whisper-large-v3 --data-dir tokenized_data/Archi/whisper-large-v3/split_cyrillic --num-epochs 10 --batch-size 2
+#torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir openai/whisper-large-v3 --data-dir tokenized_data/Rutul/whisper-large-v3/split1_cyrillic --num-epochs 10 --batch-size 2
+#torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir openai/whisper-large-v3 --data-dir tokenized_data/Archi/whisper-large-v3/split_cyrillic --num-epochs 10 --batch-size 2
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2-Audio-7B-Instruct --data-dir tokenized_data/Archi/Qwen2-Audio-7B-Instruct/split --num-epochs 6 --batch-size 2 #--full-shard
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2-Audio-7B-Instruct --data-dir tokenized_data/Rutul/Qwen2-Audio-7B-Instruct/split1 --num-epochs 6 --batch-size 2 #--full-shard
 #torchrun --nproc_per_node=1 --rdzv_endpoint=localhost:29666 src/train.py --model-dir Qwen/Qwen2.5-Omni-7B --data-dir tokenized_data/Archi/Qwen2.5-Omni-7B/split --num-epochs 6 --batch-size 2 #--full-shard

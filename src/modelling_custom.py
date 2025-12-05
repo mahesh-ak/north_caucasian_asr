@@ -126,7 +126,7 @@ def update_model_for_custom_tokenizer_whisper(model_name, new_processor_path):
 
 
 
-def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path):
+def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path, avg=True):
     """
     Update the model's token embeddings to match the tokenizer's vocabulary size.
     This is necessary when a new tokenizer with a different vocabulary size is created.
@@ -135,7 +135,7 @@ def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path):
     if 'noinit' in new_processor_path:
         init = False
     
-    new_processor = AutoProcessor.from_pretrained(new_processor_path.replace('_noinit',''))
+    new_processor = AutoProcessor.from_pretrained(new_processor_path.replace('_noinit','').replace('_noavg',''))
     model_config = AutoConfig.from_pretrained(model_name)
     model_config.pad_token_id = new_processor.tokenizer.pad_token_id
     model_config.bos_token_id = new_processor.tokenizer.bos_token_id
@@ -198,11 +198,12 @@ def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path):
             for new_idx, old_idx in mapping.items():
                 model.lm_head.weight[new_idx, :] = old_model.lm_head.weight[old_idx[0],:]
                 model.lm_head.bias[new_idx]      = old_model.lm_head.bias[old_idx[0]]
-                if len(old_idx) > 2:
+                if len(old_idx) > 2 and avg:
                     model.lm_head.weight[new_idx, :] += old_model.lm_head.weight[old_idx[1],:]
                     model.lm_head.bias[new_idx]      += old_model.lm_head.bias[old_idx[1]]
                     model.lm_head.weight[new_idx, :] *= 0.5
                     model.lm_head.bias[new_idx]      *= 0.5
+                        
     
     ## save to new_processor_path
     model.save_pretrained(new_processor_path)
@@ -212,12 +213,15 @@ def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path):
 
 
 if __name__ == "__main__":
-    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1") 
+    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1") 
     #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split2")
     #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split3")
-    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split")
-    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noinit") 
-    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noinit")
+    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split")
+    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noinit") 
+    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noinit")
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noavg", avg=False) 
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noavg", avg=False)
+
 
 
 
