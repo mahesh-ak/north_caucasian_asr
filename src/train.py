@@ -184,7 +184,7 @@ def main():
     batch_size = args.batch_size
         
     print(f"Loading dataset from {data_dir}")
-    tokenized_dataset = { split: load_from_disk(data_dir / split).select(range(2)) for split in ['train','validation','test'] }
+    tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
 
     # create ids for each split for traceability
     for split in ['train','validation','test']:
