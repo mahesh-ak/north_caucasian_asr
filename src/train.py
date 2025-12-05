@@ -157,11 +157,11 @@ def main():
     data_dir = Path(args.data_dir)
     
     cyrl2ipa = None
-    if 'cyrillic' in data_dir.parts[1].lower():
-        with open(data_dir.parent / "ipa2cyrl.json", "r", encoding="utf-8") as f:
+
+    if 'cyrillic' in str(data_dir).lower():
+        with open(data_dir / "ipa2cyrl.json", "r", encoding="utf-8") as f:
             ipa2cyrl = json.load(f)
         cyrl2ipa = invert_mapping(ipa2cyrl)
-        
     model_type = "ctc"
     lr = 3e-4
     num_epochs = args.num_epochs
@@ -184,7 +184,7 @@ def main():
     batch_size = args.batch_size
         
     print(f"Loading dataset from {data_dir}")
-    tokenized_dataset = { split: load_from_disk(data_dir / split) for split in ['train','validation','test'] }
+    tokenized_dataset = { split: load_from_disk(data_dir / split).select(range(2)) for split in ['train','validation','test'] }
 
     # create ids for each split for traceability
     for split in ['train','validation','test']:
