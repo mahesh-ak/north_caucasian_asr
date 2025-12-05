@@ -15,3 +15,4 @@ pympi-ling==1.71
 openai==2.8.1
 python-dotenv==1.2.1
 peft==0.18.0
+backoff==2.2.1

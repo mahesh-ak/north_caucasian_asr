@@ -1,6 +1,8 @@
 lang,model_name,split_name,wer,cer,per
 Archi,Qwen2-Audio-7B-Instruct,split,0.579,0.163,0.18
+Archi,Qwen2-Audio-7B-Instruct,split_cyrillic,1.028,0.846,0.803
 Archi,Qwen2.5-Omni-7B,split,0.705,0.184,0.199
+Archi,Qwen2.5-Omni-7B,split_cyrillic,1.021,0.921,0.886
 Archi,custom,split,0.514,0.124,0.131
 Archi,custom,split_noinit,0.851,0.282,0.283
 Archi,custom,zero_shot,1.0,0.544,0.558
@@ -8,9 +10,12 @@ Archi,gpt-4o-transcribe,split,0.982,0.435,0.436
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split,0.564,0.14,0.147
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.593,0.606
 Archi,whisper-large-v3,split,0.408,0.099,0.107
+Archi,whisper-large-v3,split_cyrillic,1.021,0.916,0.878
 Archi,whisper-small,split,0.526,0.157,0.166
 Rutul,Qwen2-Audio-7B-Instruct,split1,0.778,0.242,0.239
+Rutul,Qwen2-Audio-7B-Instruct,split1_cyrillic,1.074,0.967,0.903
 Rutul,Qwen2.5-Omni-7B,split1,0.852,0.263,0.257
+Rutul,Qwen2.5-Omni-7B,split1_cyrillic,1.104,1.158,0.92
 Rutul,custom,split1,0.744,0.206,0.204
 Rutul,custom,split1_noinit,0.82,0.237,0.233
 Rutul,custom,split2,0.904,0.279,0.268
@@ -22,4 +27,5 @@ Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split2,0.901,0.284,0.272
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split3,0.818,0.232,0.225
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.656,0.66
 Rutul,whisper-large-v3,split1,0.757,0.241,0.239
+Rutul,whisper-large-v3,split1_cyrillic,1.074,0.974,0.9
 Rutul,whisper-small,split1,0.844,0.338,0.327
