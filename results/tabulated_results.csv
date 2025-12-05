@@ -9,7 +9,7 @@ Archi,custom,zero_shot,1.0,0.544,0.558
 Archi,gpt-4o-transcribe,split,0.982,0.435,0.436
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split,0.564,0.14,0.147
 Archi,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.593,0.606
-Archi,whisper-large-v3,split,0.408,0.099,0.107
+Archi,whisper-large-v3,split,0.402,0.099,0.107
 Archi,whisper-large-v3,split_cyrillic,0.422,0.111,0.118
 Archi,whisper-small,split,0.526,0.157,0.166
 Rutul,Qwen2-Audio-7B-Instruct,split1,0.778,0.242,0.239
@@ -26,6 +26,6 @@ Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split1,0.793,0.225,0.219
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split2,0.901,0.284,0.272
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,split3,0.818,0.232,0.225
 Rutul,wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns,zero_shot,1.0,0.656,0.66
-Rutul,whisper-large-v3,split1,0.757,0.241,0.239
+Rutul,whisper-large-v3,split1,0.778,0.253,0.251
 Rutul,whisper-large-v3,split1_cyrillic,0.783,0.25,0.252
 Rutul,whisper-small,split1,0.844,0.338,0.327
