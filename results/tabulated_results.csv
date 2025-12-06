@@ -3,7 +3,7 @@ Archi,Qwen2-Audio-7B-Instruct,split,0.579,0.163,0.18
 Archi,Qwen2-Audio-7B-Instruct,split_cyrillic,0.539,0.156,0.166
 Archi,Qwen2.5-Omni-7B,split,0.705,0.184,0.199
 Archi,Qwen2.5-Omni-7B,split_cyrillic,0.708,0.212,0.219
-Archi,custom,split,0.504,0.122,0.127
+Archi,custom,split,0.479,0.116,0.122
 Archi,custom,split_noavg,0.462,0.116,0.123
 Archi,custom,split_noinit,0.593,0.138,0.147
 Archi,custom,zero_shot,1.0,0.544,0.558
