@@ -15,7 +15,6 @@ import soundfile as sf
 
 
 load_dotenv()  # <-- loads OPENAI_API_KEY from .env
-client = OpenAI()  # key is picked automatically
 
 
 def collect_split_samples(data_dir, split_json, split_name):
@@ -94,7 +93,7 @@ def compute_metrics_openai(pred_str, ref_str, save_results=False, results_folder
     return {"wer": round(wer_val, 3), "cer": round(cer_val, 3), "per": round(char_stats["per"], 3)}
 
 
-def transcribe_openai(audio_path, model="gpt-4o-transcribe", prompt=None):
+def transcribe_openai(audio_path, client, model="gpt-4o-transcribe", prompt=None):
     """
     Transcribe audio using OpenAI models.
     - Audio-capable models: use client.audio.transcriptions.create()
@@ -149,13 +148,14 @@ def transcribe_openai(audio_path, model="gpt-4o-transcribe", prompt=None):
 def run_inference(data_dir, split_json, split_name, model_name, results_dir, prompt):
     samples = collect_split_samples(data_dir, split_json, split_name)
 
+    client = OpenAI()  # key is picked automatically
     preds, refs = [], []
     for audio, ref in tqdm(samples, desc=f"Running inference on {split_name}"):
         suceeded = False
         count = 0
         while not suceeded:
             try:
-                pred = transcribe_openai(audio, model=model_name, prompt=prompt)
+                pred = transcribe_openai(audio, client, model=model_name, prompt=prompt)
             except Exception as e:
                 count += 1
                 print(f"[ERROR] Failed on {audio}: {e}, {count} time")
@@ -193,6 +193,7 @@ def parse_args():
 
 
 def main():
+
     args = parse_args()
 
     data_dir = Path(args.data_dir)

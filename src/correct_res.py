@@ -25,6 +25,7 @@ def main():
     args = parse_args()
     results_dir = Path(args.results_dir)
 
+    cyrl2ipa = None
     if args.ipa2cyrl:
         with open(args.ipa2cyrl, "r", encoding="utf-8") as f:
             ipa2cyrl = json.load(f)
