@@ -40,57 +40,74 @@ def ctc_beam_search_with_lm(
     logits,
     processor,
     lm,
-    beam_size=3,
-    alpha=0.5,
-    beta=0.1,
+    beam_size=5,
+    alpha=0.7,
+    beta=1.0,
 ):
     """
-    Beam search in model token space, LM scoring in word space.
+    Beam search in model token space, LM scoring in phoneme space.
+    External behavior preserved.
     """
 
     vocab_size = logits.size(-1)
+    blank_id = processor.tokenizer.pad_token_id
+    eos_id = processor.tokenizer.eos_token_id
+    unk_id = processor.tokenizer.unk_token_id
+    id2tok = processor.tokenizer.convert_ids_to_tokens
 
-    ## beams: list of (token_ids, ctc_log_prob)
-    beams = [([], 0.0)]
+    # beams: list of (token_ids, decoded_phonemes, last_token, total_score, eos)
+    beams = [([], [], None, 0.0)]
 
     T = logits.size(0)
 
     for t in range(T):
         log_probs = torch.log_softmax(logits[t], dim=-1)
-
         new_beams = []
 
-        for tokens, ctc_score in beams:
+        for token_ids, decoded, last_tok, score in beams:
             for v in range(vocab_size):
-                new_tokens = tokens + [v]
+                new_score = score + log_probs[v].item()
 
-                # CTC score so far
-                new_ctc_score = ctc_score + log_probs[v].item()
+                # --- CTC rules ---
+                if v in [blank_id, last_tok]:
+                    # blank or previous token: no symbol added
+                    new_beams.append(
+                        (token_ids + [v], decoded, last_tok, new_score)
+                    )
+                    continue
 
-                # 🔥 decode to text **only for scoring**, not for generating tokens
-                decoded = processor.batch_decode([new_tokens])[0]
+                if v in [unk_id, eos_id]:
+                    # special tokens: no symbol added
+                    new_beams.append(
+                        (token_ids + [v], decoded, v, new_score)
+                    )
+                    continue
 
-                # convert to word tokens for LM
-                words = decoded.split()
+                # real symbol (phoneme or '|')
+                sym = id2tok(v)
 
-                # LM score
+                new_decoded = decoded + [sym]
+
+                words = ''.join(new_decoded).split('|')
+                # LM score (phoneme n-gram LM)
                 lm_s = lm_score(lm, words, alpha) if words else 0.0
 
-                # word insertion bonus
-                total_score = new_ctc_score + lm_s + beta * len(words)
+                total_score = new_score + lm_s + beta * len(words)
 
-                new_beams.append((new_tokens, total_score))
+                new_beams.append(
+                    (token_ids + [v], new_decoded, v, total_score)
+                )
 
         # prune
-        new_beams.sort(key=lambda x: x[1], reverse=True)
+        new_beams.sort(key=lambda x: x[3], reverse=True)
         beams = new_beams[:beam_size]
 
-    # choose best sequence
-    best_tokens, best_score = beams[0]
-    best_text = processor.batch_decode([best_tokens], skip_special_tokens=True)[0]
+    best_token_ids, best_decoded, _, best_score = beams[0]
+
+    # final rendering (only here)
+    best_text = processor.decode(best_token_ids, skip_special_tokens=True)
 
     return best_text, best_score
-
 
 
 def main():

@@ -35,7 +35,7 @@ def write_corpus(lines, out_path):
     """
     with open(out_path, "w", encoding="utf-8") as f:
         for line in lines:
-            phonemes = space_separate(line)  # returns list of tokens
+            phonemes = space_separate(' '.join(line.split()))  # returns list of tokens
             if not phonemes:
                 continue
             # join with spaces to make KenLM-friendly corpus

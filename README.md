@@ -33,7 +33,7 @@ This file should have columns `src`, `dst` and `type`
  `python src/prompt_llm.py --data-dir processed_data/Archi --split-json processed_data/Archi/split.json --vocab processed_data/Archi/vocab.json`
 
 > Sample command to run wav2vec2-ipa with 3-gram lm decoding:
-`python src/infer_with_lm.py --data-dir tokenized_data/Archi/custom/split/test --model models/Archi/custom/split --lm-path models/Archi/lm/split/lm.klm --beam-size 1 --alpha 0.7 --beta 1.0 --results-dir results/Archi/custom/split_lm`
+`python src/infer_with_lm.py --data-dir tokenized_data/Archi/custom/split/test --model models/Archi/custom/split --lm-path models/Archi/lm/split/lm.klm --beam-size 10 --alpha 0.3 --beta 0.3 --results-dir results/Archi/custom/split_lm`
 
 > Command to train 3-gram lm:
 ` python src/train_lm.py --data-dir processed_data/Rutul --split-file processed_data/Rutul/split1.json --order 3`
