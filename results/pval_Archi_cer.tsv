@@ -1,0 +1,9 @@
+	custom_split	custom_split_lm	custom_split_noavg	custom_split_noinit	wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns_split	whisper-large-v3_split	Qwen2-Audio-7B-Instruct_split	Qwen2.5-Omni-7B_split
+custom_split	-	0.901	0.810	< 1e-3	< 1e-3	0.170	< 1e-3	< 1e-3
+custom_split_lm	0.901	-	0.847	0.048	0.059	0.049	< 1e-3	< 1e-3
+custom_split_noavg	0.810	0.847	-	0.078	0.117	0.151	< 1e-3	< 1e-3
+custom_split_noinit	< 1e-3	0.048	0.078	-	0.510	0.001	0.027	< 1e-3
+wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns_split	< 1e-3	0.059	0.117	0.510	-	0.002	0.029	< 1e-3
+whisper-large-v3_split	0.170	0.049	0.151	0.001	0.002	-	< 1e-3	< 1e-3
+Qwen2-Audio-7B-Instruct_split	< 1e-3	< 1e-3	< 1e-3	0.027	0.029	< 1e-3	-	0.002
+Qwen2.5-Omni-7B_split	< 1e-3	< 1e-3	< 1e-3	< 1e-3	< 1e-3	< 1e-3	0.002	-
