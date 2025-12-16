@@ -17,8 +17,9 @@ def convert_to_dolgo(sent):
     out_tokens = []
     missing = []
     for tok in sent_tokens:
-        if tok in [' ', '.']:
-            out_tokens.append(tok)
+        if tok in [' ', '.',',']:
+            #out_tokens.append(tok)
+            pass
         elif tok in dolgo.converter:
             out_tokens.append(dolgo.converter[tok])
         elif len(tok) > 1 and tok[:-1] in dolgo.converter:
@@ -28,6 +29,7 @@ def convert_to_dolgo(sent):
         elif len(tok) > 3 and tok[:-3] in dolgo.converter:
             out_tokens.append(dolgo.converter[tok[:-3]])
         else:
+            out_tokens.append(tok)
             missing.append(tok)
     if len(missing) > 0:
         print(missing)
