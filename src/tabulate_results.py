@@ -93,6 +93,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
         if lang_dir.is_dir():
             lang = lang_dir.name
             pval_methods = []
+            top_errors = []
             # iterate over model names
             print(lang)
             for model_dir in tqdm(lang_dir.iterdir()):
@@ -119,6 +120,11 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         "cer": round(cer,3),
                                         "per": round(per,3)
                                     })
+
+                                    classification_report = stats.get("char_stats",{}).get("classification_report", None)
+                                    f1_scores = [(k, round(v['f1-score'],2), int(v['support'])) for k,v in classification_report.items() if k not in ['<eps>', ' ', 'accuracy', 'macro avg','weighted avg'] and v['support'] > 0]
+                                    f1_scores.sort(key=lambda x: x[1])
+                                    top_errors.append({'model': model_name+'_'+split_name, 'f1': f1_scores[:25]})
                             else:
                                 print(f"Warning: {stats_file} does not exist.")
                             if preds_file.exists():
@@ -149,7 +155,12 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
             pval_wer.to_csv(f"results/pval_{lang}_wer.tsv", sep='\t')
             pval_cer.to_csv(f"results/pval_{lang}_cer.tsv", sep='\t')
 
-    
+            errors_lines = ['\t'.join(["model"] + [str(num) for num in range(1,26)])]
+            for err in top_errors:
+                errors_lines.append('\t'.join([err['model']] + [str(sc) for sc in err['f1']]))
+            with open(f"results/top_errors_{lang}.tsv",'w',encoding='utf-8') as fp:
+                fp.write('\n'.join(errors_lines))
+
     df = pd.DataFrame(all_results)
     # sort by lang, model_name, split_name incrementally
     df = df.sort_values(by=["lang", "model_name", "split_name"])
