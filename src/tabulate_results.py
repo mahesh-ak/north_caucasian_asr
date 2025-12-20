@@ -10,6 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils import space_separate
 from scipy.stats import wilcoxon
+from scipy.optimize import curve_fit
+
+def logistic(x, L, k, x0):
+    return L / (1 + np.exp(-k * (x - x0)))
 
 base_vowels = {'a', 'e', 'i', 'o', 'u', 'ɨ', 'ə', 'y'}
 long = 'ː'
@@ -196,6 +200,38 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         plt.figure(figsize=(7, 6))
                                         plt.scatter(xs, ys, alpha=0.75)
 
+                                        # Fit in log10-support space
+                                        x_log = np.log10(xs)
+
+                                        # Initial guesses: max F1, slope, midpoint
+                                        p0 = [1.0, 1.0, np.median(x_log)]
+
+                                        params, _ = curve_fit(
+                                            logistic,
+                                            x_log,
+                                            ys,
+                                            p0=p0,
+                                            maxfev=10000
+                                        )
+
+                                        L, k, x0 = params
+
+                                        # Plot fitted curve
+                                        x_fit = np.linspace(x_log.min(), x_log.max(), 300)
+                                        y_fit = logistic(x_fit, L, k, x0)
+
+                                        plt.plot(10 ** x_fit, y_fit, color="red", linewidth=2, label="Sigmoid fit")
+                                        plt.legend()
+
+                                        # Report parameters on plot
+                                        plt.text(
+                                            0.05,
+                                            0.45,
+                                            f"L={L:.2f}\nk={k:.2f}\nlog₁₀(x₀)={x0:.2f}",
+                                            transform=plt.gca().transAxes,
+                                            fontsize=9,
+                                            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none")
+                                        )
                                         # Log scale for Zipfian phoneme frequencies
                                         plt.xscale('log')
 
