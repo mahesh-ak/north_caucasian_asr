@@ -237,7 +237,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
 
                                         plt.xlabel("Training support (log scale)")
                                         plt.ylabel("F1-score")
-                                        plt.title(f"{model_name} – {split_name}\nPhoneme learning difficulty")
+                                        plt.title(f"({lang}) {model_name} – {split_name}\nPhoneme learning difficulty")
 
                                         plt.grid(True, which="both", linestyle="--", alpha=0.3)
 
