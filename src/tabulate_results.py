@@ -7,6 +7,7 @@ from tqdm import tqdm
 import evaluate
 from lingpy import rc
 import numpy as np
+import matplotlib.pyplot as plt
 from utils import space_separate
 from scipy.stats import wilcoxon
 
@@ -131,8 +132,8 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
             print(lang)
             with open(f"processed_data/{lang}/train_phonemes.json") as fp:
                 train_phonemes = json.load(fp)
-                phoneme_class = {k: {'f1-score': 1.0, 'support':v} for k,v in train_phonemes.items()}
-                phoneme_class_dict = phoneme_category_stats(phoneme_class)
+                train_phonemes = {k: {'f1-score': 1.0, 'support':v} for k,v in train_phonemes.items()}
+                phoneme_class_dict = phoneme_category_stats(train_phonemes)
                 phoneme_class_lst = list(phoneme_class_dict.keys())
             phoneme_class_lst.sort()
 
@@ -168,6 +169,59 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                     f1_scores.sort(key=lambda x: x[1])
                                     top_errors.append({'model': model_name+'_'+split_name, 'f1': f1_scores[:25]})
                                     phoneme_cat_scores.append((model_name, split_name, phoneme_category_stats(classification_report)))
+
+                                    # Collect data 
+                                    xs = []
+                                    ys = []
+                                    labels = []
+
+                                    for phoneme, stats_p in classification_report.items():
+                                        if phoneme in ['<eps>', ' ', 'accuracy', 'macro avg', 'weighted avg']:
+                                            continue
+                                        if phoneme not in train_phonemes:
+                                            continue
+
+                                        train_sup = train_phonemes[phoneme]['support']
+                                        test_sup = stats_p.get('support', 0)
+
+                                        if train_sup > 0 and test_sup > 0:
+                                            xs.append(train_sup)
+                                            ys.append(stats_p['f1-score'])
+                                            labels.append(phoneme)
+
+                                    if len(xs) > 0:
+                                        xs = np.array(xs)
+                                        ys = np.array(ys)
+
+                                        plt.figure(figsize=(7, 6))
+                                        plt.scatter(xs, ys, alpha=0.75)
+
+                                        # Log scale for Zipfian phoneme frequencies
+                                        plt.xscale('log')
+
+                                        plt.xlabel("Training support (log scale)")
+                                        plt.ylabel("F1-score")
+                                        plt.title(f"{model_name} – {split_name}\nPhoneme learning difficulty")
+
+                                        plt.grid(True, which="both", linestyle="--", alpha=0.3)
+
+                                        # Annotate ALL phonemes
+                                        for x, y, lab in zip(xs, ys, labels):
+                                            plt.annotate(
+                                                lab,
+                                                (x, y),
+                                                fontsize=7,
+                                                alpha=0.85,
+                                                textcoords="offset points",
+                                                xytext=(2, 2)
+                                            )
+
+                                        # Save plot
+                                        out_path = split_dir / "phoneme_f1_vs_train_support.png"
+                                        plt.tight_layout()
+                                        plt.savefig(out_path, dpi=300)
+                                        plt.close()
+
                             else:
                                 print(f"Warning: {stats_file} does not exist.")
                             if preds_file.exists():
