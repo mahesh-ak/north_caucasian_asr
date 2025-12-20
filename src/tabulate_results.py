@@ -10,7 +10,41 @@ import numpy as np
 from utils import space_separate
 from scipy.stats import wilcoxon
 
+base_vowels = {'a', 'e', 'i', 'o', 'u', 'ɨ', 'ə', 'y'}
+long = 'ː'
+pharyn = 'ˤ'
 
+base_consonants = {'b', 'd', 'd͡ʒ', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'q', 's', 't', 't͡s', 't͡ʃ', 'w', 'x', 'ɢ', 'ʁ', 'ʃ', 'χ', 'ɬ', 'ʒ', 'ʟ', 'ɣ', 'ʔ', 'ʕ', 'z', 'r', 'j', 'ħ', 'ɮ'}
+lab = 'ʷ'
+eject = 'ʼ'
+pal = 'ʲ'
+
+def phoneme_category_stats(char_stats_dict):
+    ph_cat_stats = {'V': [], 'C': []}
+    all_marks = [long, pharyn, lab, eject, pal]
+    for k, v in char_stats_dict.items():
+        base_form = k
+        suffix = ''
+        for i, c in enumerate(list(k)):
+            if c in all_marks:
+                suffix = str(k[i:])
+                base_form = str(k[:i])
+                break
+        if base_form in base_vowels:
+            cat_str = 'V' + suffix
+        elif base_form in base_consonants:
+            cat_str = 'C' + suffix
+        else:
+            continue
+        if v['support'] == 0:
+            continue
+
+        if cat_str not in ph_cat_stats:
+            ph_cat_stats[cat_str] = [v['f1-score']]
+        else:
+            ph_cat_stats[cat_str].append(v['f1-score'])
+    return {k: (round(np.mean(v),3), round(np.std(v),3), len(v)) for k,v in ph_cat_stats.items()}
+        
 def pvalue_matrix(methods, metric="wer"):
     """
     Compute pairwise Wilcoxon signed-rank test p-value matrix.
@@ -55,7 +89,7 @@ def pvalue_matrix(methods, metric="wer"):
     return pd.DataFrame(mat, index=names, columns=names)
 
 
-dolgo = rc("dolgo")
+dolgo = rc("asjp")
 
 cer_metric = evaluate.load("cer")
 wer_metric = evaluate.load("wer")
@@ -66,8 +100,7 @@ def convert_to_dolgo(sent):
     missing = []
     for tok in sent_tokens:
         if tok in [' ', '.',',']:
-            #out_tokens.append(tok)
-            pass
+            out_tokens.append(tok)
         elif tok in dolgo.converter:
             out_tokens.append(dolgo.converter[tok])
         elif len(tok) > 1 and tok[:-1] in dolgo.converter:
@@ -79,8 +112,6 @@ def convert_to_dolgo(sent):
         else:
             out_tokens.append(tok)
             missing.append(tok)
-    #if len(missing) > 0:
-        #print(missing)
     return ''.join(out_tokens)
 
 def tabulate_results(results_root="results", output_csv="results/tabulated_results.csv"):
@@ -95,7 +126,18 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
             pval_methods = []
             top_errors = []
             # iterate over model names
+            if lang == 'RutulOld':
+                continue
             print(lang)
+            with open(f"processed_data/{lang}/train_phonemes.json") as fp:
+                train_phonemes = json.load(fp)
+                phoneme_class = {k: {'f1-score': 1.0, 'support':v} for k,v in train_phonemes.items()}
+                phoneme_class_dict = phoneme_category_stats(phoneme_class)
+                phoneme_class_lst = list(phoneme_class_dict.keys())
+            phoneme_class_lst.sort()
+
+            phoneme_cat_scores = []
+
             for model_dir in tqdm(lang_dir.iterdir()):
                 if model_dir.is_dir():
                     model_name = model_dir.name
@@ -125,6 +167,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                     f1_scores = [(k, round(v['f1-score'],2), int(v['support'])) for k,v in classification_report.items() if k not in ['<eps>', ' ', 'accuracy', 'macro avg','weighted avg'] and v['support'] > 0]
                                     f1_scores.sort(key=lambda x: x[1])
                                     top_errors.append({'model': model_name+'_'+split_name, 'f1': f1_scores[:25]})
+                                    phoneme_cat_scores.append((model_name, split_name, phoneme_category_stats(classification_report)))
                             else:
                                 print(f"Warning: {stats_file} does not exist.")
                             if preds_file.exists():
@@ -145,7 +188,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                 refs = preds_df["Reference"].to_list()
                                 preds = preds_df["Prediction"].to_list()
                                 der = cer_metric.compute(predictions=preds, references=refs)
-                                all_results[-1]['der'] = round(der, 3)
+                                all_results[-1]['aer'] = round(der, 3)
             ## compute p-vals
             if len(pval_methods) == 0:
                 continue
@@ -160,6 +203,12 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                 errors_lines.append('\t'.join([err['model']] + [str(sc) for sc in err['f1']]))
             with open(f"results/top_errors_{lang}.tsv",'w',encoding='utf-8') as fp:
                 fp.write('\n'.join(errors_lines))
+
+            phoneme_cat_lines = ['\t'.join(["model", "split"] + [f"{p} ({phoneme_cat_scores[0][2][p][2]}/{phoneme_class_dict[p][2]})" for p in phoneme_class_lst])]
+            for ph_cat in phoneme_cat_scores:
+                phoneme_cat_lines.append('\t'.join([ph_cat[0], ph_cat[1]] + [str(ph_cat[2][p][0]) for p in phoneme_class_lst]))
+            with open(f"results/phoneme_catwise_{lang}.tsv",'w',encoding='utf-8') as fp:
+                fp.write('\n'.join(phoneme_cat_lines))
 
     df = pd.DataFrame(all_results)
     # sort by lang, model_name, split_name incrementally

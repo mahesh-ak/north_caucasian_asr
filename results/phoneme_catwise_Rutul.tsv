@@ -1,0 +1,20 @@
+model	split	C (27/27)	Cʲ (3/11)	Cʲː (1/1)	Cʷ (4/9)	Cʼ (6/6)	Cʼʲ (1/1)	Cʼʷ (1/2)	V (7/7)	Vː (2/4)	Vˤ (3/6)
+gpt-4o-transcribe	split1	0.396	0.0	0.0	0.1	0.0	0.0	0.0	0.457	0.034	0.0
+whisper-large-v3	split1_cyrillic	0.721	0.333	0.0	0.417	0.0	0.0	0.0	0.678	0.133	0.0
+whisper-large-v3	split1	0.76	0.429	0.0	0.31	0.37	0.0	0.0	0.715	0.056	0.165
+Qwen2-Audio-7B-Instruct	split1_cyrillic	0.683	0.0	0.0	0.228	0.0	0.0	0.0	0.665	0.097	0.0
+Qwen2-Audio-7B-Instruct	split1	0.712	0.611	0.0	0.42	0.374	0.0	0.0	0.68	0.094	0.151
+wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns	zero_shot	0.326	0.0	0.0	0.0	0.0	0.0	0.0	0.309	0.22	0.0
+wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns	split3	0.773	0.333	0.0	0.408	0.427	0.0	0.0	0.724	0.0	0.197
+wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns	split2	0.732	0.333	0.0	0.249	0.401	0.0	0.0	0.79	0.286	0.255
+wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns	split1	0.797	0.389	0.0	0.468	0.586	0.0	0.0	0.725	0.038	0.261
+Qwen2.5-Omni-7B	split1_cyrillic	0.686	0.0	0.0	0.199	0.0	0.0	0.0	0.607	0.107	0.0
+Qwen2.5-Omni-7B	split1	0.693	0.278	0.0	0.28	0.246	0.0	0.0	0.642	0.071	0.024
+whisper-small	split1	0.318	0.0	0.0	0.0	0.0	0.0	0.0	0.323	0.0	0.0
+custom	zero_shot	0.415	0.0	0.0	0.0	0.0	0.0	0.0	0.331	0.0	0.0
+custom	split3	0.757	0.167	0.0	0.251	0.419	0.0	0.0	0.693	0.0	0.197
+custom	split2	0.739	0.267	0.0	0.211	0.405	0.0	0.0	0.773	0.25	0.21
+custom	split1_noinit	0.757	0.222	0.0	0.356	0.479	0.0	0.0	0.699	0.133	0.263
+custom	split1_noavg	0.809	0.317	0.0	0.389	0.506	0.0	0.667	0.732	0.138	0.35
+custom	split1_lm	0.789	0.333	0.0	0.363	0.567	0.0	0.0	0.747	0.074	0.32
+custom	split1	0.79	0.222	0.0	0.36	0.567	0.0	0.0	0.748	0.107	0.315
