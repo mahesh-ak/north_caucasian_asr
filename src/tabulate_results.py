@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from utils import space_separate
 from scipy.stats import wilcoxon
 from scipy.optimize import curve_fit
+from adjustText import adjust_text
 
 def logistic(x, L, k, x0):
     return L / (1 + np.exp(-k * (x - x0)))
@@ -178,6 +179,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                     xs = []
                                     ys = []
                                     labels = []
+                                    point_sizes = []
 
                                     for phoneme, stats_p in classification_report.items():
                                         if phoneme in ['<eps>', ' ', 'accuracy', 'macro avg', 'weighted avg']:
@@ -191,6 +193,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         if train_sup > 0 and test_sup > 0:
                                             xs.append(train_sup)
                                             ys.append(stats_p['f1-score'])
+                                            point_sizes.append(np.log10(test_sup + 1) * 20)  # size proportional to log of test support
                                             labels.append(phoneme)
 
                                     if len(xs) > 0:
@@ -198,7 +201,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         ys = np.array(ys)
 
                                         plt.figure(figsize=(7, 6))
-                                        plt.scatter(xs, ys, alpha=0.75)
+                                        plt.scatter(xs, ys, alpha=0.75, s= point_sizes)
 
                                         # Fit in log10-support space
                                         x_log = np.log10(xs)
@@ -242,15 +245,21 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         plt.grid(True, which="both", linestyle="--", alpha=0.3)
 
                                         # Annotate ALL phonemes
+                                        label_texts = []
+
                                         for x, y, lab in zip(xs, ys, labels):
-                                            plt.annotate(
-                                                lab,
-                                                (x, y),
-                                                fontsize=7,
-                                                alpha=0.85,
-                                                textcoords="offset points",
-                                                xytext=(2, 2)
-                                            )
+                                            #lab_txt = plt.annotate(
+                                            #    lab,
+                                            #    (x, y),
+                                            #    fontsize=7,
+                                            #    alpha=0.85,
+                                            #    textcoords="offset points",
+                                            #    xytext=(2, 2)
+                                            #)
+                                            lab_txt = plt.text(x, y, lab, fontsize=7, alpha=0.85)
+                                            label_texts.append(lab_txt)
+                                        adjust_text(label_texts) 
+
 
                                         # Save plot
                                         out_path = split_dir / "phoneme_f1_vs_train_support.png"
