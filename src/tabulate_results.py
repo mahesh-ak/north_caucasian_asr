@@ -5,7 +5,6 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 import evaluate
-from lingpy import rc
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import space_separate
@@ -95,30 +94,10 @@ def pvalue_matrix(methods, metric="wer"):
     return pd.DataFrame(mat, index=names, columns=names)
 
 
-dolgo = rc("asjp")
 
 cer_metric = evaluate.load("cer")
 wer_metric = evaluate.load("wer")
 
-def convert_to_dolgo(sent):
-    sent_tokens = space_separate(sent)
-    out_tokens = []
-    missing = []
-    for tok in sent_tokens:
-        if tok in [' ', '.',',']:
-            out_tokens.append(tok)
-        elif tok in dolgo.converter:
-            out_tokens.append(dolgo.converter[tok])
-        elif len(tok) > 1 and tok[:-1] in dolgo.converter:
-            out_tokens.append(dolgo.converter[tok[:-1]])
-        elif len(tok) > 2 and tok[:-2] in dolgo.converter:
-            out_tokens.append(dolgo.converter[tok[:-2]])
-        elif len(tok) > 3 and tok[:-3] in dolgo.converter:
-            out_tokens.append(dolgo.converter[tok[:-3]])
-        else:
-            out_tokens.append(tok)
-            missing.append(tok)
-    return ''.join(out_tokens)
 
 def tabulate_results(results_root="results", output_csv="results/tabulated_results.csv"):
     results_root = Path(results_root)
@@ -135,7 +114,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
             if lang == 'RutulOld':
                 continue
             print(lang)
-            with open(f"processed_data/{lang}/train_phonemes.json") as fp:
+            with open(f"results/{lang}/train_phonemes.json") as fp:
                 train_phonemes = json.load(fp)
                 train_phonemes = {k: {'f1-score': 1.0, 'support':v} for k,v in train_phonemes.items()}
                 phoneme_class_dict = phoneme_category_stats(train_phonemes)
@@ -240,7 +219,23 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
 
                                         plt.xlabel("Training support (log scale)")
                                         plt.ylabel("F1-score")
-                                        plt.title(f"({lang}) {model_name} – {split_name}\nPhoneme learning difficulty")
+                                        model_name_txt = model_name
+                                        if 'japlmthufielta' in model_name:
+                                            model_name_txt = 'wav2vec2-large-ipa'
+                                        elif 'custom' in model_name:
+                                            model_name_txt = 'w2v2l-custom-avg'
+                                            if 'lm' in split_name:
+                                                model_name_txt += '-lm'
+                                            elif 'noinit' in split_name:
+                                                model_name_txt = model_name_txt.replace('-avg','')
+                                            elif 'noavg' in split_name:
+                                                model_name_txt = model_name_txt.replace('-avg','-cpy1')
+
+                                        if 'zero_shot' in split_name:
+                                            model_name_txt += '-zs'
+                                        if 'cyrillic' in split_name:
+                                            model_name_txt += '-cyrl'
+                                        plt.title(f"({lang}) {model_name_txt} - Phoneme learning difficulty")
 
                                         plt.grid(True, which="both", linestyle="--", alpha=0.3)
 
@@ -281,13 +276,6 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         "cer": preds_df['cer'].to_list()
                                     })
 
-                                ## compute Dolgopolsky-class error rate
-                                for col in ['Reference', 'Prediction']:
-                                    preds_df[col] = preds_df.apply(lambda x: convert_to_dolgo(x[col]),axis=1)
-                                refs = preds_df["Reference"].to_list()
-                                preds = preds_df["Prediction"].to_list()
-                                der = cer_metric.compute(predictions=preds, references=refs)
-                                all_results[-1]['aer'] = round(der, 3)
             ## compute p-vals
             if len(pval_methods) == 0:
                 continue
