@@ -184,7 +184,7 @@ def parse_args():
                      help="Folder to save inference results. If not provided, defaults to results/<data_dir.parts[1:]>/<model>/<split name>")
     p.add_argument(
                     "--prompt",
-                    default="Transcribe the audio in {lang} (a North Caucasian language) into Cyrillic. Do not translate, interpret, or add punctuation. Output only the transcription.",
+                    default="Transcribe the audio in {lang} (a Northeast Caucasian language) into Cyrillic. Do not translate, interpret, or add punctuation. Output only the transcription.",
                     help="Optional transcription prompt for IPA output"
                 )
     p.add_argument("--vocab", required=False,

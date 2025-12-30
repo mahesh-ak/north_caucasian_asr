@@ -33,7 +33,7 @@ def ipa_to_cyrillic(text: str, ipa2cyrl: dict) -> str:
 conversations = lambda lang, is_cyrillic: {
     'qwen_audio': [{"role": "user", "content": [
                         {"type": "audio"},     # audio will be bound by processor(audio=..)
-                        {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
+                        {"type": "text", "text": f"Transcribe the audio in {lang} (a Northeast Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
                     ]}],
     'qwen_omni': [ {   
                             "role": "system",
@@ -47,13 +47,13 @@ conversations = lambda lang, is_cyrillic: {
                             "role": "user",
                             "content": [
                                 {"type": "audio"},                # binds to processor(..., audio=audios)
-                                {"type": "text", "text": f"Transcribe the audio in {lang} (a North Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
+                                {"type": "text", "text": f"Transcribe the audio in {lang} (a Northeast Caucasian language) into {'IPA (Internation Phonetic Alphabet)' if not is_cyrillic else 'Cyrillic'}. Do not translate, interpret, or add punctuation. Output only the {'phonetic ' if not is_cyrillic else ''}transcription."},
                             ],
                 }],
     'phi': [
             {
                 "role": "user",
-                "content": f"<|audio_1|>Transcribe the audio in {lang} (a North Caucasian language) into IPA (International Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."
+                "content": f"<|audio_1|>Transcribe the audio in {lang} (a Northeast Caucasian language) into IPA (International Phonetic Alphabet). Do not translate, interpret, or add punctuation. Output only the phonetic transcription."
             }
         ]
 
