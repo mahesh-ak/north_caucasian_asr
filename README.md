@@ -38,11 +38,7 @@ This file should have columns `src`, `dst` and `type`
 > Command to train 3-gram lm:
 ` python src/train_lm.py --data-dir processed_data/Rutul --split-file processed_data/Rutul/split1.json --order 3`
 
-## To do
 
-* Add feature to handle Archi data
-* Fix identifier for tiers containing IPA transcripts
-* Fix the notation of `data/<LANG>/char_map.tsv` f
 
 base_vowels = {'a', 'e', 'i', 'o', 'u', 'ɨ', 'ə', 'y'}
 long = 'ː'
@@ -53,7 +49,8 @@ lab = 'ʷ'
 eject = 'ʼ'
 pal = 'ʲ'
 
+> IPA-Cyrillic Map
 Rutul:  a-а aː-аа  aˤ-аӀ b-б d-д dʲ-дʼ d͡ʒ-дж d͡ʒʷ-джв e-е eˤ-еӀ f-ф g-г gʲ-гʼ gʷ-гв h-гь hʷ-гьв i-и iː-ии iˤ-иӀ j-й k-к kʲ-кʼ kʷ-кв kʼ-кӀ kʼʲ-кӀʼ kʼʷ-кӀв l-л lʲ-лʼ m-м mʲ-мʼ n-н nʲ-нʼ o-о oˤ-оӀ p-п pʲ-пʼ pʼ-пӀ q-хъ qʷ-хъв qʼ-хъӀ qʼʷ-хъӀв r-р s-с sʲ-сʼ t-т tʲ-тʼ tʼ-тӀ t͡s-ц t͡sʼ-цӀ t͡ʃ-ч t͡ʃʷ-чв t͡ʃʼ-чӀ u-у uː-уу uˤ-уӀ v-в w-в wʲ-вʼ x-хь xʲ-хьʼ xʷ-хьв y-уь z-з ø-ё ɢ-къ ɢʷ-къв ɣ-гӀ ɨ-ы ɨː-ыы ɨˤ-ыӀ ʁ-гъ ʁʷ-гъв ʃ-ш ʃʲː-щʼ ʒ-ж ʔ-Ӏъ χ-х χʷ-хв
 
 
-Archi: a-a aː-аа aːˤ-ааӏ aˤ-аӏ b-б d-д e-е eː-ее eːˤ-ееӏ eˤ-еӏ g-г gʷ-гв h-гь i-и iː-ии iˤ-иӏ j-й k-к kʷ-кв kʼ-кӏ kʼʷ-кӏв kː-кк kːʷ-ккв l-л m-м n-н o-о oː-оо oːˤ-ооӏ oˤ-оӏ p-п pʼ-пӏ pː-пп q-хъ qʷ-хъв qʼ-хъӏ qʼʷ-къв qʼː-ккъ qʼːˤ-ккъӏ qʼˤ-къӏ qʼˤʷ-къӏв qˤ-хъӏ qˤʷ-хъв r-р s-с sː-сс t-т tʼ-тӏ tː-тт t͡s-ц t͡sʼ-цӏ t͡sʼː-ццӏ t͡ʃ-ч t͡ʃʼ-чӏ u-у uː-уу uˤ-уӏ w-в z-з ħ-гӏ ə ɬ-лъ ɬː-ллъ ɬːʷ-ллъв ɮ-лъ ʁ-гъ ʁˤ-гъӏ ʃ-ш ʃʷ-шв ʃː-щ ʃːʷ-щв ʒ-ж ʒʷ-жв ʔ-ъ ʕ-ӏ ʟ-лӏ ʟʼ-кь ʟʼʷ-кьв χ-х χʷ-хв χː-хх χːʷ-ххв χːˤ-ххьӏ χˤ-хьӏ
+Archi: a-a aː-аа aːˤ-ааӏ aˤ-аӏ b-б d-д e-е eː-ее eːˤ-ееӏ eˤ-еӏ g-г gʷ-гв h-гь i-и iː-ии iˤ-иӏ j-й k-к kʷ-кв kʼ-кӏ kʼʷ-кӏв kː-кк kːʷ-ккв l-л m-м n-н o-о oː-оо oːˤ-ооӏ oˤ-оӏ p-п pʼ-пӏ pː-пп q-хъ qʷ-хъв qʼ-хъӏ qʼʷ-къв qʼː-ккъ qʼːˤ-ккъӏ qʼˤ-къӏ qʼˤʷ-къӏв qˤ-хъӏ qˤʷ-хъв r-р s-с sː-сс t-т tʼ-тӏ tː-тт t͡s-ц t͡sʼ-цӏ t͡sʼː-ццӏ t͡ʃ-ч t͡ʃʼ-чӏ u-у uː-уу uˤ-уӏ w-в z-з ħ-гӏ ə-a ɬ-лъ ɬː-ллъ ɬːʷ-ллъв ɮ-лъ ʁ-гъ ʁˤ-гъӏ ʃ-ш ʃʷ-шв ʃː-щ ʃːʷ-щв ʒ-ж ʒʷ-жв ʔ-ъ ʕ-ӏ ʟ-лӏ ʟʼ-кь ʟʼʷ-кьв χ-х χʷ-хв χː-хх χːʷ-ххв χːˤ-ххьӏ χˤ-хьӏ
