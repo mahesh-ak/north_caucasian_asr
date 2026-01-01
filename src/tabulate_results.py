@@ -7,13 +7,27 @@ from tqdm import tqdm
 import evaluate
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import space_separate
+#from utils import space_separate
 from scipy.stats import wilcoxon
 from scipy.optimize import curve_fit
 from adjustText import adjust_text
+from sklearn.metrics import r2_score
 
 def logistic(x, L, k, x0):
     return L / (1 + np.exp(-k * (x - x0)))
+
+# --- Confidence / error bands (delta method) ---
+# Jacobian of logistic wrt parameters
+
+def logistic_jacobian(x, L, k, x0):
+    z = k * (x - x0)
+    s = 1 / (1 + np.exp(-z))
+
+    dL = s
+    dk = L * s * (1 - s) * (x - x0)
+    dx0 = -L * s * (1 - s) * k
+
+    return np.column_stack([dL, dk, dx0])
 
 base_vowels = {'a', 'e', 'i', 'o', 'u', 'ɨ', 'ə', 'y'}
 long = 'ː'
@@ -150,6 +164,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
 
                                     classification_report = stats.get("char_stats",{}).get("classification_report", None)
                                     f1_scores = [(k, round(v['f1-score'],2), int(v['support'])) for k,v in classification_report.items() if k not in ['<eps>', ' ', 'accuracy', 'macro avg','weighted avg'] and v['support'] > 0]
+                                    f1_scores.sort(key=lambda x: -x[2])
                                     f1_scores.sort(key=lambda x: x[1])
                                     top_errors.append({'model': model_name+'_'+split_name, 'f1': f1_scores[:25]})
                                     phoneme_cat_scores.append((model_name, split_name, phoneme_category_stats(classification_report)))
@@ -188,7 +203,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         # Initial guesses: max F1, slope, midpoint
                                         p0 = [1.0, 1.0, np.median(x_log)]
 
-                                        params, _ = curve_fit(
+                                        params, pcov = curve_fit(
                                             logistic,
                                             x_log,
                                             ys,
@@ -197,25 +212,45 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
                                         )
 
                                         L, k, x0 = params
+                                        all_results[-1]['phoneme_fit_logx0'] = round(x0,3)
 
                                         # Plot fitted curve
                                         x_fit = np.linspace(x_log.min(), x_log.max(), 300)
                                         y_fit = logistic(x_fit, L, k, x0)
 
-                                        plt.plot(10 ** x_fit, y_fit, color="red", linewidth=2, label="Sigmoid fit")
+                                        # --- R^2 ---
+                                        y_pred = logistic(x_log, *params)
+                                        r2 = r2_score(ys, y_pred)
+                                        all_results[-1]['phoneme_fit_r2'] = round(r2,3)
+
+                                        # Variance via quadratic form: J Σ Jᵀ
+                                        J = logistic_jacobian(x_fit, L, k, x0)
+                                        y_var = np.einsum("ij,jk,ik->i", J, pcov, J)
+                                        y_std = np.sqrt(np.maximum(y_var, 0))      # numerical safety
+
+                                        # --- Plot ---
+                                        plt.plot(10**x_fit, y_fit, color="red", linewidth=2,
+                                                label=f"Sigmoid fit")
+
+                                        plt.plot(10**x_fit, y_fit + 1.96*y_std, color="red",
+                                                linestyle="dotted", linewidth=1)
+
+                                        plt.plot(10**x_fit, y_fit - 1.96*y_std, color="red",
+                                                linestyle="dotted", linewidth=1)
                                         plt.legend()
 
                                         # Report parameters on plot
                                         plt.text(
                                             0.05,
                                             0.45,
-                                            f"L={L:.2f}\nk={k:.2f}\nlog₁₀(x₀)={x0:.2f}",
+                                            f"L={L:.2f}\nk={k:.2f}\nlog₁₀(x₀)={x0:.2f}\n$R^2$={r2:.2f}",
                                             transform=plt.gca().transAxes,
                                             fontsize=9,
                                             bbox=dict(facecolor="white", alpha=0.7, edgecolor="none")
                                         )
                                         # Log scale for Zipfian phoneme frequencies
                                         plt.xscale('log')
+                                        plt.ylim(-0.05, 1.05)
 
                                         plt.xlabel("Training support (log scale)")
                                         plt.ylabel("F1-score")
