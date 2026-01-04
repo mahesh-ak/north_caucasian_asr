@@ -214,14 +214,14 @@ def update_model_for_custom_tokenizer_wav2vec2(model_name, new_processor_path, a
 
 
 if __name__ == "__main__":
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1") 
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split2")
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split3")
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1") 
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split2")
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split3")
     update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split")
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noinit") 
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noinit")
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noavg", avg=False) 
-    #update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noavg", avg=False)
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noinit") 
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noinit")
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Rutul/custom/split1_noavg", avg=False) 
+    update_model_for_custom_tokenizer_wav2vec2("ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns", "models/Archi/custom/split_noavg", avg=False)
 
 
 
