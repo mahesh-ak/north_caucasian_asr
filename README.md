@@ -17,6 +17,15 @@ If no such file is given to `src/data.py`, it is automatically generated based o
 This file should have columns `src`, `dst` and `type`
 `type` should be in `cyrillic`, `mixed`, `unclear`, `delimiter`, `glossing`, `punctuation`
 
+## `processed_data/` structure
+
+Each folder is labeled by the name of the language. Eg. `processed_data/Rutul/`
+
+Each sub-folder is a possible split and contains a `dataset.csv` and corresponding `.wav` files in `segments/`.
+
+For instance, the sub-folder `Gold` contains test-set.
+
+
 > Sample command for data processing
 
  `python src/data.py --data-dir data/Rutul --char-map-file processed_data/Rutul/char_map_annotated.tsv --tokenizer ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns --tier-names-file processed_data/Rutul/tier_names.txt`
