@@ -67,7 +67,9 @@ Archi: a-a aː-аа aːˤ-ааӏ aˤ-аӏ b-б d-д e-е eː-ее eːˤ-ееӏ e
 
 ## Data Sources
 - Archi
+
   Aleksandr E. Kibrik, Sandro V. Kodzasov, Irina P. Olovyannikova, Dzhalil S. Samedov, Michael Daniel, Anna Khoroshkina, and Alexandre Arkhipov. 2007. Archi text corpus (1.0).
 - Kina Rutul
+
   Anastasia Alekseeva, N. Beklemishev, Michael Daniel,  Nina Dobrushina, Konstantin Filatov, A. Ivanova, Timur Maisak, and I. Osorgin. 2024. Dictionary of kina rutul.
 
