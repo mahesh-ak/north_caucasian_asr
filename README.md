@@ -25,6 +25,7 @@ Each sub-folder is a possible split and contains a `dataset.csv` and correspondi
 
 For instance, the sub-folder `Gold` contains test-set.
 
+## Sample commands
 
 > Sample command for data processing
 
@@ -39,23 +40,32 @@ For instance, the sub-folder `Gold` contains test-set.
  `torchrun --nproc_per_node=2 src/train.py --model-dir models/Rutul/custom/ --data-dir tokenized_data/Rutul/custom/ --num-epochs 5 --batch-size 1`
 
 > Sample command to run gpt-4o-transcribe:
- `python src/prompt_llm.py --data-dir processed_data/Archi --split-json processed_data/Archi/split.json --vocab processed_data/Archi/vocab.json`
+
+`python src/prompt_llm.py --data-dir processed_data/Archi --split-json processed_data/Archi/split.json --vocab processed_data/Archi/vocab.json`
 
 > Sample command to run wav2vec2-ipa with 3-gram lm decoding:
+
 `python src/infer_with_lm.py --data-dir tokenized_data/Archi/custom/split/test --model models/Archi/custom/split --lm-path models/Archi/lm/split/lm.klm --beam-size 10 --alpha 0.3 --beta 0.3 --results-dir results/Archi/custom/split_lm`
 
 > Command to train 3-gram lm:
+
 ` python src/train_lm.py --data-dir processed_data/Rutul --split-file processed_data/Rutul/split1.json --order 3`
 
 
+## Phonemes and Features covered
 
 base_vowels = {'a', 'e', 'i', 'o', 'u', 'ɨ', 'ə', 'y'}
+
 long = 'ː'
+
 pharyn = 'ˤ'
 
 base_consonants = {'b', 'd', 'd͡ʒ', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'q', 's', 't', 't͡s', 't͡ʃ', 'w', 'x', 'ɢ', 'ʁ', 'ʃ', 'χ', 'ɬ', 'ʒ', 'ʟ', 'ɣ', 'ʔ', 'ʕ', 'z', 'r', 'j', 'ħ', 'ɮ'}
+
 lab = 'ʷ'
+
 eject = 'ʼ'
+
 pal = 'ʲ'
 
 ## IPA-Cyrillic Map
