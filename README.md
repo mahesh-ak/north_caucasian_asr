@@ -20,7 +20,7 @@ This file should have columns `src`, `dst` and `type`
 
 ## Downloading data
 
-Processing `data/` directory is only relevant when the raw data is available in the prescribed format. We don't provide the raw data, instead the processed data can be downloaded from [here](https://huggingface.co/datasets/mahesh27/archi_rutul_asr). After downloading rename the folder from `archi_rutul_asr` to `processed_data`
+Processing `data/` directory is only relevant when the raw data is available in the prescribed format. We don't provide the raw data, instead the processed data can be downloaded from [https://huggingface.co/datasets/mahesh27/archi_rutul_asr](https://huggingface.co/datasets/mahesh27/archi_rutul_asr). After downloading rename the folder from `archi_rutul_asr` to `processed_data`
 
 ## `processed_data/` structure
 
