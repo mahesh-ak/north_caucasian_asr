@@ -208,13 +208,7 @@ __marimo__/
 
 # Data files
 data/
-# In processed_data do not exclude Archi/Gold and Rutul/Gold
-processed_data/*
-!processed_data/**
-processed_data/**/*
-!processed_data/**/**/
-!processed_data/**/Gold/*
-!processed_data/**/Gold/segments/*
+processed_data/
 tokenized_data/
 
 # Model files
