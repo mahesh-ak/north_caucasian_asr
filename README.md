@@ -88,5 +88,5 @@ Cite these when using the datasets:
   Aleksandr E. Kibrik, Sandro V. Kodzasov, Irina P. Olovyannikova, Dzhalil S. Samedov, Michael Daniel, Anna Khoroshkina, and Alexandre Arkhipov. 2007. Archi text corpus (1.0).
 - Kina Rutul
 
-  Anastasia Alekseeva, Nikita Beklemishev, Michael Daniel,  Nina Dobrushina, Konstantin Filatov, Anastasia Ivanova, Timur Maisak, and Ivan Osorgin. 2024. Dictionary of Kina Rutul.
+  Anastasia Alekseeva, Nikita Beklemishev, Michael Daniel, Nina Dobrushina, Konstantin Filatov, Anastasia Ivanova, Timur Maisak, and Ivan Osorgin. 2024. Dictionary of Kina Rutul.
 
