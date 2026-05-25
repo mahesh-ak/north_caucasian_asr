@@ -22,6 +22,12 @@ This file should have columns `src`, `dst` and `type`
 
 Processing `data/` directory is only relevant when the raw data is available in the prescribed format. We don't provide the raw data, instead the processed data can be downloaded from [https://huggingface.co/datasets/mahesh27/archi_rutul_asr](https://huggingface.co/datasets/mahesh27/archi_rutul_asr). After downloading rename the folder from `archi_rutul_asr` to `processed_data`
 
+## Best Performing Models
+
+The best performing models are avaible at Hugging Face hub:
+- [mahesh27/w2v2l-custom-archi](https://huggingface.co/mahesh27/w2v2l-custom-archi)
+- [mahesh27/w2v2l-custom-rutul](https://huggingface.co/mahesh27/w2v2l-custom-rutul)
+
 ## `processed_data/` structure
 
 Each folder is labeled by the name of the language. Eg. `processed_data/Rutul/`
