@@ -128,7 +128,7 @@ def tabulate_results(results_root="results", output_csv="results/tabulated_resul
             if lang == 'RutulOld':
                 continue
             print(lang)
-            with open(f"results/{lang}/train_phonemes.json") as fp:
+            with open(f"results/{lang}/tr_phonemes.json") as fp:
                 train_phonemes = json.load(fp)
                 train_phonemes = {k: {'f1-score': 1.0, 'support':v} for k,v in train_phonemes.items()}
                 phoneme_class_dict = phoneme_category_stats(train_phonemes)
