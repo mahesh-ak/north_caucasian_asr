@@ -91,8 +91,47 @@ pal = 'ʲ'
 Cite these when using the datasets:
 - Archi
 
-  Aleksandr E. Kibrik, Sandro V. Kodzasov, Irina P. Olovyannikova, Dzhalil S. Samedov, Michael Daniel, Anna Khoroshkina, and Alexandre Arkhipov. 2007. Archi text corpus (1.0).
+```
+@misc{kibrik2007Archi,
+    title = {Archi text corpus (1.0)},
+    author = {Kibrik, Aleksandr E. and Kodzasov, Sandro V. and Olovyannikova, Irina P. and Samedov, Dzhalil S. and Daniel, Michael and Khoroshkina, Anna and Arkhipov, Alexandre},
+    year = {2007},
+    url = { https://doi.org/10.5281/zenodo.8247597}
+}
+```
 - Kina Rutul
 
-  Anastasia Alekseeva, Nikita Beklemishev, Michael Daniel, Nina Dobrushina, Konstantin Filatov, Anastasia Ivanova, Timur Maisak, and Ivan Osorgin. 2024. Dictionary of Kina Rutul.
+```
+@misc{alekseevaetal2024,
+  title = {Dictionary of Kina Rutul},
+  author = {Alekseeva, Anastasia and Beklemishev, Nikita and Daniel, Michael and Dobrushina, Nina and Filatov, Konstantin and Ivanova, Anastasia and Maisak, Timur and Osorgin, Ivan},
+  year = {2024},
+  publisher = {Linguistic Convergence Laboratory, HSE University},
+  address = {Moscow},
+  url = {https://lingconlab.github.io/kina-rutul-dict/},
+}
+```
 
+## Citation for this work
+
+```
+@inproceedings{akavarapu-etal-2026-hard,
+    title = "Hard to Be Heard: Phoneme-Level {ASR} Analysis of Phonologically Complex, Low-Resource Endangered Languages",
+    author = {Akavarapu, V.S.D.S.Mahesh  and
+      Daniel, Michael  and
+      J{\"a}ger, Gerhard},
+    editor = "Liakata, Maria  and
+      Moreira, Viviane P.  and
+      Zhang, Jiajun  and
+      Jurgens, David",
+    booktitle = "Findings of the {A}ssociation for {C}omputational {L}inguistics: {ACL} 2026",
+    month = jul,
+    year = "2026",
+    address = "San Diego, California, United States",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.findings-acl.147/",
+    doi = "10.18653/v1/2026.findings-acl.147",
+    pages = "3014--3028",
+    ISBN = "979-8-89176-395-1",
+}
+```
